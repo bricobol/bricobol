@@ -1,0 +1,20 @@
+{
+  "name": "BricoBol",
+  "short_name": "BricoBol",
+  "description": "Gestion d'association BricoBol",
+  "start_url": "/bricobol/",
+  "scope": "/bricobol/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#0f172a",
+  "background_color": "#0f172a",
+  "lang": "fr",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
