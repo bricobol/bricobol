@@ -8,6 +8,9 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230f172a'/%3E%3Ctext x='50' y='72' font-size='64' text-anchor='middle'%3E%F0%9F%A7%B0%3C/text%3E%3C/svg%3E">
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230f172a'/%3E%3Ctext x='50' y='72' font-size='64' text-anchor='middle'%3E%F0%9F%A7%B0%3C/text%3E%3C/svg%3E">
 
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f172a">
+
 <script defer src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -409,10 +412,7 @@ body{background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;o
     <button id="btnRecharger" onclick="BricoBol.recharger()" title="Recharger depuis le serveur" style="background:none;border:none;font-size:1.3rem;cursor:pointer;padding:6px 10px;border-radius:8px;color:var(--text);">🔄</button>
   </header>
 
-  <!-- Bandeau pause Supabase -->
   <div id="pauseBandeau" style="display:none;"></div>
-
-  <!-- Bandeau d'état (connexion Supabase) -->
   <div id="syncBandeau" style="display:none;"></div>
 
   <div class="content" id="contentArea"></div>
@@ -12338,6 +12338,17 @@ Router.register({
   getModalsHTML: () => Parametres.getModalsHTML(),
   onShow: () => Parametres.onShow()
 });
+</script>
+
+<!-- Service Worker (PWA) -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(() => console.log('✅ Service Worker enregistré'))
+      .catch(err => console.warn('⚠️ Service Worker:', err));
+  });
+}
 </script>
 
 </body>
