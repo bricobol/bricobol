@@ -2652,7 +2652,7 @@ const Tournee = {
 
   confirmerFait(event) {
     event.preventDefault();
-    const id = parseInt(document.getElementById('tourneeFaitId').value);
+    const id = String(document.getElementById('tourneeFaitId').value);
     const dateRealisee = document.getElementById('tourneeFaitDate').value;
     const heureRealisee = document.getElementById('tourneeFaitHeure').value;
     const note = document.getElementById('tourneeFaitNote').value.trim();
@@ -2699,7 +2699,7 @@ const Tournee = {
 
   confirmerReporter(event) {
     event.preventDefault();
-    const id = parseInt(document.getElementById('tourneeReportId').value);
+    const id = String(document.getElementById('tourneeReportId').value);
     const nouvelleDate = document.getElementById('tourneeReportDate').value;
     const raison = document.getElementById('tourneeReportRaison').value.trim();
     if (!nouvelleDate) { alert('Choisissez une date.'); return; }
@@ -2765,7 +2765,7 @@ const Tournee = {
 
   confirmerRelancer(event) {
     event.preventDefault();
-    const id = parseInt(document.getElementById('tourneeRelanceId').value);
+    const id = String(document.getElementById('tourneeRelanceId').value);
     const quoi = document.getElementById('tourneeRelanceQuoi').value.trim();
     const note = document.getElementById('tourneeRelanceNote').value.trim();
     const radioDate = document.getElementById('tourneeRelanceDateRadio');
@@ -2795,7 +2795,7 @@ const Tournee = {
   },
 
   retirerRelance() {
-    const id = parseInt(document.getElementById('tourneeRelanceId').value);
+    const id = String(document.getElementById('tourneeRelanceId').value);
     if (!id) return;
     if (!confirm('Retirer la relance ?')) return;
 
@@ -2841,7 +2841,7 @@ const Tournee = {
 
   confirmerAssigner(event) {
     event.preventDefault();
-    const id = parseInt(document.getElementById('tourneeAssignId').value);
+    const id = String(document.getElementById('tourneeAssignId').value);
     const b1 = document.getElementById('tourneeAssignBenevole1').value.trim();
     const b2 = document.getElementById('tourneeAssignBenevole2').value.trim();
 
@@ -3256,7 +3256,7 @@ const Missions = {
 
   confirmerPrendre(event) {
     event.preventDefault();
-    const id = parseInt(document.getElementById('missionsPrendreId').value);
+    const id = String(document.getElementById('missionsPrendreId').value);
     const b1 = document.getElementById('missionsPrendreBenevole1').value.trim();
     const b2 = document.getElementById('missionsPrendreBenevole2').value.trim();
 
@@ -3328,7 +3328,7 @@ const Missions = {
 
   confirmerTerminer(event) {
     event.preventDefault();
-    const id = parseInt(document.getElementById('missionsTerminerId').value);
+    const id = String(document.getElementById('missionsTerminerId').value);
     const kmStr = document.getElementById('missionsTerminerKm').value.trim();
     const km = kmStr === '' ? null : parseFloat(kmStr);
     const remarque = document.getElementById('missionsTerminerRemarque').value.trim();
@@ -3470,7 +3470,7 @@ const Missions = {
   },
 
   _updateMontantValider() {
-    const i = this.getAll().find(x => x.id === parseInt(document.getElementById('missionsValiderId').value));
+    const i = this.getAll().find(x => x.id === String(document.getElementById('missionsValiderId').value));
     if (!i) return;
 
     let kmChoisi = 0;
@@ -3499,7 +3499,7 @@ const Missions = {
 
   async confirmerValider(event) {
     event.preventDefault();
-    const id = parseInt(document.getElementById('missionsValiderId').value);
+    const id = String(document.getElementById('missionsValiderId').value);
     const i = this.getAll().find(x => x.id === id);
     if (!i) { alert('Mission introuvable.'); return; }
 
@@ -8952,7 +8952,7 @@ const Cotisations = {
 
   validerPaiement(event) {
     event.preventDefault();
-    const id = parseInt(document.getElementById('cotisModalAdhId').value);
+    const id = String(document.getElementById('cotisModalAdhId').value);
     const options = {
       date: document.getElementById('cotisModalDate').value,
       montant: parseFloat(document.getElementById('cotisModalMontant').value) || this.getMontant(),
@@ -8994,7 +8994,7 @@ const Cotisations = {
 
   confirmerValidation(event) {
     event.preventDefault();
-    const id = parseFloat(document.getElementById('cotisValidId').value);
+    const id = String(document.getElementById('cotisValidId').value);
     const options = {
       montant: parseFloat(document.getElementById('cotisValidMontant').value) || 0,
       mode: document.getElementById('cotisValidMode').value,
