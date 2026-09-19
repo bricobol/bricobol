@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "io.github.bricobol.twa",
+        "sha256_cert_fingerprints": ["7C:4E:59:A6:EB:AA:E2:26:AA:1E:16:55:68:E1:A4:C8:5F:C1:88:54:A7:28:8A:1E:10:BD:4A:DB:74:0B:05:DD"]
+      }
+    }]
