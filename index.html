@@ -4301,8 +4301,9 @@ const Adherents = {
 
   closeForm() { document.getElementById('adherentFormModal').classList.remove('active'); },
 
-  save(event) {
+      save(event) {
     event.preventDefault();
+console.log('🔥 SAVE — prenom lu =', document.getElementById('adhPrenom').value, '| id =', document.getElementById('adhEditId').value);
     const id = document.getElementById('adhEditId').value;
     const type = document.getElementById('adhType').value;
     const cbAussi = document.getElementById('adhAussiBenevole');
@@ -4336,7 +4337,7 @@ const Adherents = {
     }
 
     const estBenevoleData = (type === 'Bénévole') || aussiBenevole;
-
+    
     if (estBenevoleData) {
       if (this.engagementsTemp.length === 0) {
         alert('Un bénévole doit choisir au moins une façon d\'aider.');
@@ -4373,7 +4374,7 @@ const Adherents = {
 
     const list = this.getAll();
     if (id) {
-      const idx = list.findIndex(a => a.id === parseInt(id));
+      const idx = list.findIndex(a => String(a.id) === String(id));
       if (idx !== -1) list[idx] = { ...list[idx], ...data };
     } else {
       list.push({ id: Date.now(), numero: this.nextNumero(), ...data, dateAjout: new Date().toISOString() });
@@ -6358,7 +6359,7 @@ const Interventions = {
 
     const list = this.getAll();
     if (id) {
-      const idx = list.findIndex(i => i.id === parseInt(id));
+      const idx = list.findIndex(i => String(i.id) === String(id));
       if (idx !== -1) list[idx] = { ...list[idx], ...data };
     } else {
       list.push({ id: Date.now(), numero: this.nextNumero(), dateCreation: Utils.todayISO(), ...data });
@@ -7146,7 +7147,7 @@ const Agenda = {
     if (!data.titre || !data.date) { alert('Titre et date obligatoires.'); return; }
     const list = this.getEvenements();
     if (id) {
-      const idx = list.findIndex(e => e.id === parseInt(id));
+      const idx = list.findIndex(e => String(e.id) === String(id));
       if (idx !== -1) list[idx] = { ...list[idx], ...data };
     } else {
       list.push({ id: Date.now(), ...data });
@@ -7859,7 +7860,7 @@ const Frais = {
 
     const list = this.getAll();
     if (id) {
-      const idx = list.findIndex(f => f.id === parseInt(id));
+      const idx = list.findIndex(f => String(f.id) === String(id));
       if (idx !== -1) list[idx] = { ...list[idx], ...data };
     } else {
       list.push({ id: Date.now(), numero: this.nextNumero(), ...data });
@@ -9688,7 +9689,7 @@ const Dons = {
 
     const list = this.getAll();
     if (id) {
-      const idx = list.findIndex(d => d.id === parseInt(id));
+      const idx = list.findIndex(d => String(d.id) === String(id));
       if (idx !== -1) {
         data.recetteGeneree = list[idx].recetteGeneree;
         data.comptaIds = list[idx].comptaIds || [];
