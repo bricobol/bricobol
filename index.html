@@ -11722,6 +11722,10 @@ const Parametres = {
     this.renderCampagnes();
     this.renderEngagements();
     this.renderCompetences();
+    // Onglet Messages
+    set('paramSignatureMessage', p.signatureMessage);
+    set('paramLienSiteMessage', p.lienSiteMessage);
+    this.renderModelesMessages();
     this.updateStorageInfo();
 
     // Appliquer l'onglet courant
@@ -11915,6 +11919,29 @@ const Parametres = {
     this.saveParam(p);
     this.renderCompetences();
   },
+  renderModelesMessages() {
+    const c = document.getElementById('paramModelesMessages');
+    if (!c) return;
+    const p = this.getParam();
+    const ms = p.modelesMessages || [];
+    if (ms.length === 0) {
+      c.innerHTML = '<div style="color:var(--text-light);font-size:.85rem;padding:8px;">Aucun modèle.</div>';
+      return;
+    }
+    c.innerHTML = ms.map((m, i) => `
+      <div style="border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px;background:#f8fafc;">
+        <div style="font-weight:700;font-size:.9rem;margin-bottom:8px;">${Utils.escapeHtml(m.label)}</div>
+        <div class="form-group">
+          <label style="font-size:.78rem;">Sujet (email)</label>
+          <input type="text" class="modeleSujet" data-idx="${i}" value="${Utils.escapeHtml(m.sujet || '')}" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;">
+        </div>
+        <div class="form-group">
+          <label style="font-size:.78rem;">Corps du message</label>
+          <textarea class="modeleCorps" data-idx="${i}" rows="4" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;font-family:inherit;">${Utils.escapeHtml(m.corps || '')}</textarea>
+        </div>
+      </div>
+    `).join('');
+  },
   resetCompetences() { if (!confirm('Réinitialiser ?')) return; const p = this.getParam(); p.competences = JSON.parse(JSON.stringify(this.COMPETENCES_DEFAUT)); this.saveParam(p); this.renderCompetences(); },
   resetEngagements() { if (!confirm('Réinitialiser ?')) return; const p = this.getParam(); p.engagements = JSON.parse(JSON.stringify(this.ENGAGEMENTS_DEFAUT)); this.saveParam(p); this.renderEngagements(); },
   resetMessageBienvenue() { if (!confirm('Réinitialiser ?')) return; const p = this.getParam(); p.messageBienvenue = this.MESSAGE_BIENVENUE_DEFAUT; this.saveParam(p); document.getElementById('paramMessageBienvenue').value = p.messageBienvenue; },
@@ -11999,6 +12026,19 @@ const Parametres = {
     p.baremeKm = parseFloat(document.getElementById('paramBareme').value) || 0.40;
     p.exerciceCourant = parseInt(document.getElementById('paramExercice').value) || new Date().getFullYear();
 
+
+    // Onglet Messages
+    p.signatureMessage = document.getElementById('paramSignatureMessage').value.trim() || "L'équipe BricoBol – aide solidaire";
+    p.lienSiteMessage = document.getElementById('paramLienSiteMessage').value.trim() || 'https://sites.google.com/view/bricobol';
+    p.modelesMessages = p.modelesMessages || [];
+    document.querySelectorAll('.modeleSujet').forEach(el => {
+      const i = parseInt(el.dataset.idx);
+      if (p.modelesMessages[i]) p.modelesMessages[i].sujet = el.value;
+    });
+    document.querySelectorAll('.modeleCorps').forEach(el => {
+      const i = parseInt(el.dataset.idx);
+      if (p.modelesMessages[i]) p.modelesMessages[i].corps = el.value;
+    });
     this.saveParam(p);
     alert('✅ Paramètres enregistrés.');
   },
@@ -12096,6 +12136,7 @@ const Parametres = {
   <button type="button" class="param-tab" data-tab="paiements" onclick="Parametres.setTab('paiements')">💳 Paiements</button>
   <button type="button" class="param-tab" data-tab="benevoles" onclick="Parametres.setTab('benevoles')">🤝 Bénévoles</button>
   <button type="button" class="param-tab" data-tab="dons" onclick="Parametres.setTab('dons')">🎁 Dons</button>
+  <button type="button" class="param-tab" data-tab="messages" onclick="Parametres.setTab('messages')">✉️ Messages</button>
   <button type="button" class="param-tab" data-tab="divers" onclick="Parametres.setTab('divers')">⚙️ Divers</button>
   <button type="button" class="param-tab" data-tab="donnees" onclick="Parametres.setTab('donnees')">💾 Données</button>
 </div>
@@ -12274,6 +12315,32 @@ const Parametres = {
           </div>
 
           <!-- ============ ONGLET DIVERS ============ -->
+          <!-- ============ ONGLET MESSAGES ============ -->
+          <div class="param-panel" data-panel="messages">
+            <div class="card">
+              <h3 style="font-size:1rem;margin-bottom:14px;color:var(--primary);font-weight:700;">✉️ Signature et lien</h3>
+              <div class="form-group">
+                <label>Signature automatique</label>
+                <input type="text" id="paramSignatureMessage">
+                <small style="color:var(--text-light);font-size:.72rem;">Ajoutée automatiquement en bas de chaque message.</small>
+              </div>
+              <div class="form-group">
+                <label>Lien du site</label>
+                <input type="url" id="paramLienSiteMessage">
+                <small style="color:var(--text-light);font-size:.72rem;">Utilisable dans les modèles avec {site}.</small>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3 style="font-size:1rem;margin-bottom:6px;color:var(--primary);font-weight:700;">📝 Modèles de messages</h3>
+              <p style="font-size:.82rem;color:var(--text-light);margin-bottom:14px;">
+                Variables disponibles : <code>{prenom}</code>, <code>{nom}</code>, <code>{date}</code>, <code>{heure}</code>, <code>{asso}</code>, <code>{site}</code>
+              </p>
+              <div id="paramModelesMessages"></div>
+            </div>
+
+            <button type="submit" class="btn" style="width:100%;">💾 Enregistrer</button>
+          </div>
           <div class="param-panel" data-panel="divers">
             <div class="card">
               <h3 style="font-size:1rem;margin-bottom:14px;color:var(--primary);font-weight:700;">⚙️ Réglages métier</h3>
