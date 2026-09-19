@@ -2652,7 +2652,7 @@ const Tournee = {
 
   confirmerFait(event) {
     event.preventDefault();
-    const id = String(document.getElementById('tourneeFaitId').value);
+    const id = Number(document.getElementById('tourneeFaitId').value);
     const dateRealisee = document.getElementById('tourneeFaitDate').value;
     const heureRealisee = document.getElementById('tourneeFaitHeure').value;
     const note = document.getElementById('tourneeFaitNote').value.trim();
@@ -2699,7 +2699,7 @@ const Tournee = {
 
   confirmerReporter(event) {
     event.preventDefault();
-    const id = String(document.getElementById('tourneeReportId').value);
+    const id = Number(document.getElementById('tourneeReportId').value);
     const nouvelleDate = document.getElementById('tourneeReportDate').value;
     const raison = document.getElementById('tourneeReportRaison').value.trim();
     if (!nouvelleDate) { alert('Choisissez une date.'); return; }
@@ -2765,7 +2765,7 @@ const Tournee = {
 
   confirmerRelancer(event) {
     event.preventDefault();
-    const id = String(document.getElementById('tourneeRelanceId').value);
+    const id = Number(document.getElementById('tourneeRelanceId').value);
     const quoi = document.getElementById('tourneeRelanceQuoi').value.trim();
     const note = document.getElementById('tourneeRelanceNote').value.trim();
     const radioDate = document.getElementById('tourneeRelanceDateRadio');
@@ -2795,7 +2795,7 @@ const Tournee = {
   },
 
   retirerRelance() {
-    const id = String(document.getElementById('tourneeRelanceId').value);
+    const id = Number(document.getElementById('tourneeRelanceId').value);
     if (!id) return;
     if (!confirm('Retirer la relance ?')) return;
 
@@ -2841,7 +2841,7 @@ const Tournee = {
 
   confirmerAssigner(event) {
     event.preventDefault();
-    const id = String(document.getElementById('tourneeAssignId').value);
+    const id = Number(document.getElementById('tourneeAssignId').value);
     const b1 = document.getElementById('tourneeAssignBenevole1').value.trim();
     const b2 = document.getElementById('tourneeAssignBenevole2').value.trim();
 
@@ -3256,7 +3256,7 @@ const Missions = {
 
   confirmerPrendre(event) {
     event.preventDefault();
-    const id = String(document.getElementById('missionsPrendreId').value);
+    const id = Number(document.getElementById('missionsPrendreId').value);
     const b1 = document.getElementById('missionsPrendreBenevole1').value.trim();
     const b2 = document.getElementById('missionsPrendreBenevole2').value.trim();
 
@@ -3328,7 +3328,7 @@ const Missions = {
 
   confirmerTerminer(event) {
     event.preventDefault();
-    const id = String(document.getElementById('missionsTerminerId').value);
+    const id = Number(document.getElementById('missionsTerminerId').value);
     const kmStr = document.getElementById('missionsTerminerKm').value.trim();
     const km = kmStr === '' ? null : parseFloat(kmStr);
     const remarque = document.getElementById('missionsTerminerRemarque').value.trim();
@@ -3470,7 +3470,7 @@ const Missions = {
   },
 
   _updateMontantValider() {
-    const i = this.getAll().find(x => x.id === String(document.getElementById('missionsValiderId').value));
+    const i = this.getAll().find(x => x.id === Number(document.getElementById('missionsValiderId').value));
     if (!i) return;
 
     let kmChoisi = 0;
@@ -3499,7 +3499,7 @@ const Missions = {
 
   async confirmerValider(event) {
     event.preventDefault();
-    const id = String(document.getElementById('missionsValiderId').value);
+    const id = Number(document.getElementById('missionsValiderId').value);
     const i = this.getAll().find(x => x.id === id);
     if (!i) { alert('Mission introuvable.'); return; }
 
@@ -4469,7 +4469,7 @@ console.log('🔥 SAVE — prenom lu =', document.getElementById('adhPrenom').va
       } else if (enAttente) {
         cotisBadge = ` <span class="badge badge-warning" style="font-size:.65rem;">⏳ En attente (${(enAttente.montant || 0).toFixed(2)} €)</span>`;
       } else {
-        cotisBadge = ' <span class="badge badge-warning" style="font-size:.65rem;">💶 À renouveler</span>';
+        cotisBadge = ' <span class="badge badge-warning" style="font-size:.65rem;">💶 À encaisser</span>';
       }
     }
 
@@ -8729,7 +8729,7 @@ const Cotisations = {
     const nonPayants = adhActifs.filter(a => !this.isPaidForYear(a.id, year))
       .sort((a, b) => (a.nom || '').localeCompare(b.nom || ''));
 
-    document.getElementById('cotisModalTitle').textContent = `⚠️ À renouveler ${year}`;
+    document.getElementById('cotisModalTitle').textContent = `⚠️ À encaisser ${year}`;
     document.getElementById('cotisModalBody').innerHTML = `
       <div style="background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;padding:16px;margin-bottom:16px;text-align:center;">
         <div style="font-size:.75rem;color:#92400e;text-transform:uppercase;font-weight:700;margin-bottom:4px;">Adhérents à recontacter</div>
@@ -8871,7 +8871,7 @@ const Cotisations = {
         } else if (enAttente) {
           badge = `<span class="badge badge-warning">⏳ En attente (${(enAttente.montant || 0).toFixed(2)} €)</span>`;
         } else {
-          badge = `<span class="badge badge-warning">À renouveler</span>`;
+          badge = `<span class="badge badge-warning">À encaisser</span>`;
         }
         const borderColor = paid ? 'var(--success)' : (enAttente ? 'var(--warning)' : 'var(--warning)');
 
@@ -8932,6 +8932,9 @@ const Cotisations = {
   // ============================================================
 
   openPaiementModal(adherentId) {
+    if (typeof Router !== 'undefined' && Router.mountIfNeeded && Router.registry['cotisations']) {
+      Router.mountIfNeeded('cotisations', Router.registry['cotisations']);
+    }
     const adh = Storage.getAdherents().find(a => a.id === adherentId);
     if (!adh) return;
 
@@ -8952,7 +8955,7 @@ const Cotisations = {
 
   validerPaiement(event) {
     event.preventDefault();
-    const id = String(document.getElementById('cotisModalAdhId').value);
+    const id = Number(document.getElementById('cotisModalAdhId').value);
     const options = {
       date: document.getElementById('cotisModalDate').value,
       montant: parseFloat(document.getElementById('cotisModalMontant').value) || this.getMontant(),
@@ -8968,6 +8971,9 @@ const Cotisations = {
   },
 
   openValidationModal(cotisId) {
+    if (typeof Router !== 'undefined' && Router.mountIfNeeded && Router.registry['cotisations']) {
+      Router.mountIfNeeded('cotisations', Router.registry['cotisations']);
+    }
     const c = this.getAll().find(x => x.id === cotisId);
     if (!c) return;
     if (c.statut !== 'en_attente') { alert('Cette cotisation est déjà validée.'); return; }
@@ -8994,7 +9000,7 @@ const Cotisations = {
 
   confirmerValidation(event) {
     event.preventDefault();
-    const id = String(document.getElementById('cotisValidId').value);
+    const id = Number(document.getElementById('cotisValidId').value);
     const options = {
       montant: parseFloat(document.getElementById('cotisValidMontant').value) || 0,
       mode: document.getElementById('cotisValidMode').value,
@@ -9056,7 +9062,7 @@ const Cotisations = {
             <div class="stat-sub">Adhérents</div>
           </div>
           <div class="stat-card warning clickable" onclick="Cotisations.openARenouvelerModal()" title="Voir les adhérents à recontacter">
-            <div class="stat-label">À renouveler</div>
+            <div class="stat-label">À encaisser</div>
             <div class="stat-value" id="cotisStatRestant">0</div>
             <div class="stat-sub">En attente</div>
           </div>
