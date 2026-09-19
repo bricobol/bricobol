@@ -11615,7 +11615,16 @@ const Parametres = {
         virement: { actif: true, lien: '', plateforme: 'Yapla', iban: '', bic: '', titulaire: '' },
         espece: { actif: true, note: 'À remettre à un membre de l\'équipe' },
         cheque: { actif: true, note: 'À l\'ordre de l\'association', remiseEquipe: true, envoiCourrier: false }
-      }
+      },
+      signatureMessage: p.signatureMessage || "L'équipe BricoBol – aide solidaire",
+      lienSiteMessage: p.lienSiteMessage || 'https://sites.google.com/view/bricobol',
+      modelesMessages: p.modelesMessages || [
+        { id: 'confirmation', label: '✅ Confirmation RDV', sujet: 'Confirmation de votre rendez-vous', corps: 'Bonjour {prenom},\n\nJe vous confirme notre rendez-vous le {date} à {heure}.\n\nN\'hésitez pas à nous contacter en cas de changement.' },
+        { id: 'rappel', label: '⏰ Rappel RDV', sujet: 'Rappel : rendez-vous demain', corps: 'Bonjour {prenom},\n\nPetit rappel : nous avons rendez-vous demain à {heure}.\n\nÀ bientôt !' },
+        { id: 'renouvellement', label: '💶 Renouvellement adhésion', sujet: 'Renouvellement de votre adhésion', corps: 'Bonjour {prenom},\n\nVotre adhésion à {asso} arrive à échéance. N\'hésitez pas à nous recontacter pour la renouveler.' },
+        { id: 'evenement', label: '🎉 Événement', sujet: 'Invitation : {asso}', corps: 'Bonjour {prenom},\n\nNous avons le plaisir de vous inviter à notre prochain événement.\n\nAu plaisir de vous y voir !' },
+        { id: 'autre', label: '📝 Autre', sujet: '', corps: '' }
+      ],
     };
   },
 
