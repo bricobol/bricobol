@@ -1,0 +1,636 @@
+================================================================
+CONTEXTE PROJET BRICOBOL
+Dernière mise à jour : 21/09/2026 (fin chantier Messages)
+================================================================
+⚠️ FICHIER AUTONOME — tout est là pour reprendre sur un
+   nouveau chat, une nouvelle IA, ou après une longue pause.
+================================================================
+
+## C'EST QUOI CE PROJET
+
+Application de gestion pour l'association BricoBol.
+- 100% web (HTML/CSS/JS vanilla)
+- Base de données Supabase
+- Fonctionne sur PC, tablette, smartphones (Android via APK)
+- Hébergée sur GitHub Pages
+- PWA installable (manifest + service worker)
+
+## UTILISATEUR / CONTEXTE
+
+- Association BricoBol (aide solidaire)
+- 1 bureau, plusieurs bénévoles
+- 2-4 appareils synchronisés
+- Utilisation quotidienne
+- Développement se fait sur PC (VS Code) — mobile (Acode) possible en secours
+
+## ⚠️ STRUCTURE RÉELLE DU PROJET
+
+Le projet est MONOLITHIQUE : tout le code JS et CSS est
+INLINE dans index.html. Il n'y a PAS de dossier js/ ni css/.
+
+Fichiers du dépôt :
+├── index.html                 ← TOUT le code (CSS + 18 modules JS inline)
+├── manifest.json              ← PWA
+├── sw.js                      ← Service Worker (cache v9)
+├── icon.svg
+├── android-chrome-192x192.png
+├── android-chrome-512x512.png
+├── .well-known/assetlinks.json
+├── .gitignore
+└── bricobol-mobile.html       ← Fichier buildé (généré par build.js)
+
+## HÉBERGEMENT
+
+- GitHub repo : https://github.com/bricobol/bricobol
+- GitHub Pages : https://bricobol.github.io/bricobol/
+- Compte GitHub : bricobol
+
+## SUPABASE — IDENTIFIANTS
+
+URL : https://qhdrzapdcvjvjkzagkza.supabase.co
+Clé publishable : sb_publishable_AEEocm-2pofdWsumlxS83Q_0mesUy9R
+Project ref : qhdrzapdcvjvjkzagkza
+Email compte : bricobol.asso@proton.me
+Région : Europe / Plan : Free
+
+Config : API ACTIVE, RLS auto ACTIVÉ, expositions ACTIVÉ
+
+Tables : adherents, cotisations, entries, interventions,
+deplacements, dons, evenements, documents, parametres (id=1),
+counters (key/value)
+
+RLS : user connecté = tout autorisé
+
+## AUTHENTIFICATION APP
+
+- Login par email + mot de passe Supabase (auth.signInWithPassword)
+- Option "Se souvenir de moi" → localStorage `bricobol_supa_creds`
+- Détection "base en pause" (PGRST503) → bandeau rouge
+
+## APK ANDROID
+
+- Généré avec PWABuilder
+- Package ID : io.github.bricobol.twa
+- Signé (signing.keystore à garder précieusement)
+- Installé sur Wiko, lanceur Fossify Org
+- Barre d'URL en haut : à faire disparaître via assetlinks.json
+
+## ÉTAT DES DONNÉES (dernière session)
+
+Supabase :
+- adherents : 15
+- cotisations : 10
+- entries : 11
+- interventions : 7
+- deplacements : 2
+- dons : 3
+
+## VERSION UNIFIÉE
+
+Toute l'app affiche **v0.5**.
+sw.js cache : **bricobol-v9**
+
+⚠️ RÈGLE : à chaque modif importante d'index.html, incrémenter
+le cache dans sw.js (v9 → v10 → v11...). Sinon les utilisateurs
+PWA restent bloqués sur l'ancienne version.
+
+## COLONNES SUPABASE AJOUTÉES MANUELLEMENT
+
+cotisations : notes
+entries : notes
+deplacements : mode_remboursement, note_remboursement,
+               compta_id, compta_piece
+interventions : benevole_2, a_relancer (JSONB),
+                pris_en_charge_le, demarree_le, fini_le,
+                km_declares, km_valides, remarque_benevole,
+                validee_le, deplacement_id
+
+## MAPPING CAMELCASE ↔ SNAKE_CASE
+
+Voir Storage._maps dans index.html.
+
+Conversion string → nombre pour les id dans _versApp :
+id, adherentId, comptaId, donId, versementId, interventionId
+
+Conversion "" → null pour les colonnes DATE dans _versSQL.
+
+## CLEFS LOCALSTORAGE
+
+Préfixe : bricobol_
+
+- bricobol_adherents, bricobol_cotisations, bricobol_entries,
+  bricobol_interventions, bricobol_deplacements, bricobol_dons,
+  bricobol_evenements, bricobol_documents, bricobol_parametres,
+  bricobol_adh_counter
+- bricobol_active_view          (vue mémorisée)
+- bricobol_supa_creds           (email + password mémorisés)
+- bricobol_migre_v1             (flag migration)
+- bricobol_agenda_prefs         (notifications)
+
+## LISTE DES 18 MODULES INLINE
+
+1.  Storage        — cache + Supabase + DELETE + file d'attente
+2.  Utils          — dates, formatage, échappement HTML
+3.  Router         — registry + menu + navigation + mountIfNeeded
+4.  SupaClient     — client Supabase + CRUD + détection pause
+5.  BricoBol       — app shell (sidebar, GPS, recharger)
+6.  Dashboard      — stats + bandeaux + cartes cliquables
+7.  Tournee        — vue "Aujourd'hui" + calcul frais manuel
+8.  Missions       — workflow Prendre → Démarrer → Terminer → Valider
+9.  Adherents      — annuaire unifié + import Yapla
+10. Formulaire     — recrutement (papier + HTML + JSON)
+11. Interventions  — carnet + cartes cliquables
+12. Agenda         — jour/semaine/mois + événements + ICS
+13. Frais          — déplacements + calcul auto + prorata
+14. Cotisations    — encaissement + validation + verrouillage
+15. Dons           — campagnes + versements + reçus fiscaux
+16. Compta         — recettes/dépenses + grand tableau
+17. Documents      — attestations + récap AG + reçu cotisation
+18. Parametres     — 8 onglets
+
+## MENU / ORDRE
+
+Section "Vue d'ensemble" :
+- 🏠 Dashboard       (ordre 1)
+- 📅 Tournee         (ordre 2)   ← à fusionner dans Missions
+
+Section "Activité" :
+- 📋 Missions, 👥 Adherents, 🛠️ Interventions, 📅 Agenda,
+  🚗 Frais, 💶 Cotisations, 🎁 Dons, 📨 Formulaire
+
+Section "Gestion" :
+- 💰 Comptabilite, 📄 Documents, ⚙️ Parametres
+
+## STATUTS INTERVENTIONS
+
+demande → "À prendre en charge"
+prise → "Prise en charge"
+planifiee → "Planifiée"
+en_cours → "En cours"
+a_valider → "À valider"
+relancer → "À relancer"
+validee → "Validée"
+terminee → "Validée" (même libellé)
+annulee → "Annulée"
+
+## NUMÉROTATION
+
+Adhérents : ADH-XXX
+Interventions : INT-XXX
+Déplacements : DEP-XXX
+Recettes compta : REC-XXX
+Dépenses compta : DEP-XXX
+Achats (à venir) : ACH-XXX
+
+## 🖥️ OUTILLAGE DE DÉVELOPPEMENT
+
+### PC (principal) — VS Code + Git Credential Manager
+
+**Dossier de travail PC :**
+
+
+**Installation :**
+- Git for Windows installé (2.55.x)
+- Configuration : `user.name=bricobol`, `user.email=bricobol.asso@proton.me`
+- `credential.helper=manager` (Git Credential Manager)
+- `core.editor=VS Code`
+- `init.defaultbranch=main`
+- Dépôt cloné via `git clone https://github.com/bricobol/bricobol.git`
+- VS Code ouvert sur le dossier, mode restreint désactivé
+
+**Méthode de travail :**
+- Modifs directes dans VS Code (Ctrl+F pour trouver, Ctrl+H pour remplacer)
+- Validation syntaxe : VS Code affiche les erreurs JS dans l'onglet "Problèmes" en bas
+- Commit + Push via l'onglet "Contrôle de code source" (Ctrl+Shift+G)
+- En cas de modif importante : incrémenter sw.js puis commit des 2 fichiers
+
+### Mobile (secours) — Acode + terminal Alpine
+
+- Terminal Alpine Linux, Git installé via `apk add git`
+- Node.js installé via `apk add nodejs`
+
+**Dossier mobile :**
+
+
+### ⚠️ Bug FUSE Android — .git externalisé (mobile)
+
+Le système de fichiers `/storage/emulated/0` (via FUSE) ne
+gère pas bien Git "write-then-rename".
+Solution mobile : `.git` externalisé dans `/root/bricobol.git`.
+⚠️ Ne concerne QUE le mobile — sur PC tout est standard.
+
+### ⚠️ Token GitHub
+
+Le token actuel a été exposé dans un chat.
+**À RÉGÉNÉRER** quand possible :
+1. github.com/settings/tokens → Delete l'ancien
+2. Generate new (classic) → scope `repo` → No expiration
+3. Mettre à jour le remote
+
+⚠️ Sur PC, Git Credential Manager gère l'authentification
+automatiquement — le token dans l'URL ne concerne que mobile.
+
+## 📜 HISTORIQUE DES COMMITS
+
+### Session 19/09/2026 (mobile — fixes critiques)
+- `f2b3c44` — Fix sw cache v2 + gitignore
+- `3419ea3` — Unify version v0.5 + sw cache v3
+- `45dcf8e` — Messages: modèles par défaut + signature + lien (étape A)
+- `eaa1965` — Messages: onglet Parametres + editeurs de modeles (étape B)
+
+### Session 21/09/2026 (PC — suite Messages)
+- `test: verification git pc` — test config PC
+- `Messages: modale de composition + envoi email/SMS (etape C)`
+- `Messages: bouton Message dans Annuaire et fiche detail (etape D)`
+- `Messages: titres editables + ajout/suppression de modeles`
+- `Messages: bouton Message dans fiche intervention (etape E)`
+
+## FIXES APPLIQUÉS LE 19/09/2026
+
+✅ FIX CRITIQUE — Bug parseInt sur les id (2 passes)
+   parseInt → String → Number (10 endroits)
+   ⚠️ RÈGLE : NE JAMAIS utiliser parseInt/parseFloat sur les
+   id d'objets. Les id sont décimaux (Date.now() + Math.random()).
+   Utiliser Number(...) ou String(...) selon le contexte.
+
+✅ FIX — Mount module Cotisations
+   Ajout de Router.mountIfNeeded('cotisations', ...) dans :
+   - Cotisations.openPaiementModal
+   - Cotisations.openValidationModal
+
+✅ FIX — Texte "À renouveler" → "À encaisser" (4 endroits)
+
+✅ FIX — Version unifiée v0.5 (3 endroits)
+
+✅ FIX — Service Worker cache v1 → v9
+
+## FIXES APPLIQUÉS LE 21/09/2026
+
+✅ FIX — Modale Message derrière la fiche intervention
+   Ajout de `this.closeDetail();` avant
+   `Adherents.ouvrirMessageModal(contact.id);` dans
+   `Interventions.messageContact(nom)`
+
+## FIXES PRÉCÉDEMMENT APPLIQUÉS
+
+✅ Id texte vs nombre (reconverti dans _versApp)
+✅ Counters PGRST204
+✅ Focus anti-boucle (30 sec)
+✅ Bug A — Suppression propagée (DELETE des ids manquants)
+✅ Bug D — Dates vides "" converties en null
+✅ Bug F — Calcul km auto
+✅ Bug B — Remboursement frais → compta
+✅ Bug C — Autocomplete demandeur interventions
+✅ Bug E — Autocomplete tiers compta
+✅ Fix save() dupliquée dans Adherents
+✅ Grand tableau : tri chronologique + 7 colonnes triables
+
+## MODULES ET LEUR FONCTION
+
+### 🏠 Dashboard
+Stats + bandeaux d'alerte + cartes cliquables.
+
+### 📅 Tournée (à fusionner dans Missions)
+Vue Aujourd'hui (Matin/Après-midi/Soir/Retard/Relancer).
+Boutons : ✅ Fait / 📅 Reporter / 🔔 Relancer /
+          👤 Assigner / 🚗 Frais / 👁️
+
+### 📋 Missions
+Workflow : Prendre → Démarrer → Terminer → Valider.
+5 onglets : Toutes / À prendre / En cours / À valider / Validées.
+
+### 👥 Annuaire (Adherents)
+Types : Adhérent bénéficiaire, Bénévole, Donateur, Mécène, Institution.
+Import Yapla unifié. Fiche bénévole avec 4 accordéons.
+Bouton ✉️ sur cartes + fiche détail.
+
+### 📨 Recrutement (Formulaire)
+Fiche papier + formulaire HTML autonome + import JSON.
+
+### 🛠️ Interventions
+Carnet de mission. Cartes stats cliquables.
+Bouton ✉️ à côté du demandeur et du bénévole (dans la fiche).
+
+### 📅 Agenda
+Vue jour/semaine/mois. Événements. Export ICS.
+
+### 🚗 Frais
+Déplacements km, calcul auto BAN + Nominatim + OSRM. Prorata.
+
+### 💶 Cotisations
+Vue adhérents / Historique. Encaissement + validation.
+
+### 🎁 Dons
+Campagnes, versements, reçus Cerfa 11580.
+
+### 💰 Comptabilité
+Grand tableau tri chronologique. Export CSV + Excel.
+
+### 📄 Documents
+Attestation bénévolat / Récap AG / Reçu cotisation.
+
+### ⚙️ Paramètres
+8 onglets :
+- 🏛️ Association
+- 💶 Cotisations
+- 💳 Paiements
+- 🤝 Bénévoles
+- 🎁 Dons
+- ✉️ Messages
+- ⚙️ Divers
+- 💾 Données
+
+## DÉCISIONS ARCHITECTURE
+
+- Auth : email + mot de passe Supabase (1 compte partagé)
+- Suppression : propage le DELETE en Supabase
+- Hors-ligne : lecture seule + file d'attente en mémoire
+- Rafraîchissement : focus (30 sec) + bouton 🔄
+- Structure : jsonb pour sous-objets
+- RLS : user connecté = lecture/écriture
+- Calcul frais : auto (Missions) et manuel (Tournée)
+- Prorata obligatoire dans les 2 cas
+
+## RÈGLES DE TRAVAIL
+
+- L'IA ne génère PAS de code sans confirmation explicite
+- Proposer en mots d'abord, attendre "ok"
+- À chaque session : REMPLACER ce fichier
+- Préférer "cherche/remplace" aux fichiers complets
+- Ne pas surestimer le temps
+- Ne pas chercher de solutions quand l'utilisateur demande
+  juste "possible ou pas"
+- ⚠️ Code monolithique : TOUTE modif dans index.html
+- ⚠️ Sur PC : modifs directes dans VS Code, Ctrl+Z si erreur
+- ⚠️ Sur mobile : une commande à la fois dans le terminal
+- ⚠️ Backup avant modif massive
+- ⚠️ Toujours valider la syntaxe JS avant commit
+  (VS Code : onglet "Problèmes" = 0 erreur attendu)
+
+## ⚠️ PIÈGES À ÉVITER
+
+- **Backslashes dans les heredocs** : toujours vérifier qu'il
+  n'y a PAS de double `\\n` ou `\\'` dans le code JS
+- **Sauts de ligne** : utiliser des backticks (`` ` ``) plutôt
+  que `\n` dans les chaînes multi-lignes
+- **Sélection de fonction** : bien vérifier que la sélection
+  commence par `maFonction() {` et finit par `},` avant de
+  coller un remplacement
+- **Modale derrière une autre** : fermer la modale parente
+  avant d'en ouvrir une nouvelle (`this.closeDetail()` puis
+  `Adherents.ouvrirMessageModal(id)`)
+
+## BUILD
+
+node build.js → bricobol-mobile.html
+⚠️ Ne jamais modifier bricobol-mobile.html directement
+
+## ✅ CHANTIER TERMINÉ — MESSAGES
+
+Fonctionnalité : envoi de messages (email/SMS) aux adhérents
+depuis l'app, avec modèles configurables.
+
+### 📐 Architecture
+
+- Modèles stockés dans `Parametres.getParam()` →
+  `signatureMessage`, `lienSiteMessage`, `modelesMessages[]`
+- Variables : `{prenom}`, `{nom}`, `{date}`, `{heure}`,
+  `{asso}`, `{site}` — remplacées à l'envoi
+- Signature par défaut : `L'équipe BricoBol – aide solidaire`
+- Lien par défaut : `https://sites.google.com/view/bricobol`
+- Canal "Les deux" = **Simple** (ouvre email puis SMS manuel)
+
+### ✅ Toutes les étapes faites
+
+**Étape A** — 5 modèles par défaut dans `getParam()`
+
+**Étape B** — Onglet "✉️ Messages" dans Paramètres
+- Champ Signature + champ Lien site
+- Éditeurs de modèles
+
+**Étape C** — Modale de composition
+- Sélecteur Modèle, Canal (Email/SMS/Les deux)
+- Champ Objet (masqué si SMS seul)
+- Textarea Corps pré-rempli avec signature + lien
+- Compteur de caractères + SMS
+- Fonctions : `ouvrirMessageModal`, `fermerMessageModal`,
+  `_appliquerVariables`, `_majMessagePreview`, `envoyerMessage`
+
+**Étape D** — Boutons dans Annuaire
+- Sur cartes adhérents : icône ✉️
+- Dans fiche détail : bouton "✉️ Message"
+
+**Étape E** — Boutons dans fiche intervention
+- À côté du demandeur
+- À côté du bénévole assigné
+- Fonction `Interventions.messageContact(nom)` qui cherche
+  le contact dans l'annuaire et ouvre la modale
+
+**Étape bonus** — Modèles personnalisables
+- Titre éditable sur chaque modèle
+- Bouton ✖️ de suppression par modèle
+- Bouton ➕ Ajouter avec 2 squelettes (Court / Formel)
+- Fonctions : `ajouterModeleMessage`, `supprimerModeleMessage`
+
+### 🎯 Améliorations futures possibles
+
+- Envoi email enrichi (HTML) via un service tiers (Resend…)
+- Variables `{date}` et `{heure}` remplies manuellement
+  (actuellement vides par défaut)
+- Historique des messages envoyés
+- Modèles avec pièces jointes
+
+## 🆕 PRIORITÉS EN ATTENTE
+
+### 🟠 Priorité 1 — Fusion Tournée → Missions
+
+**Gros chantier. Estimation 4-6 h sur PC.**
+Découpé en 3 sessions pour ne pas saturer.
+
+**Objectif :** supprimer le module "Tournée" du menu et
+tout faire depuis "Missions" avec un 6ᵉ onglet "📅 Aujourd'hui".
+
+**Session 1 (1h-1h30) — Coquille**
+- Ajouter le 6ᵉ onglet "📅 Aujourd'hui" dans Missions
+- Juste la coquille : "En construction"
+- Vérifier que le menu s'affiche bien
+- Ne rien retirer
+
+**Session 2 (1h30-2h) — Logique**
+- Récupérer getJour, getEnRetard, getARelancer,
+  regroupement par moment
+- Sections Matin/Après-midi/Soir + Retard + Relancer
+- Boutons Fait / Reporter / Relancer / Assigner
+
+**Session 3 (1h-1h30) — Calcul frais + nettoyage**
+- Récupérer la modale de calcul manuel des frais
+- Supprimer Tournee du menu (Router.register)
+- Mettre à jour les liens Dashboard
+- Tests finaux
+
+### 🟠 Priorité 2 — Hash d'URL dans le Router
+
+**30 min. Prérequis pour les raccourcis.**
+Actuellement : Router utilise localStorage
+`bricobol_active_view`, PAS le hash d'URL.
+À ajouter : gestion de `#agenda`, `#interventions` etc.
+→ Permet les raccourcis d'écran d'accueil
+→ Utile pour le raccourci appel SIM 2
+
+### 🟠 Priorité 3 — Achats bénévoles à rembourser
+
+Voir note détaillée.
+
+### 🟡 Priorité 4 — assetlinks.json
+
+Uploader dans .well-known/ (déjà présent !) pour masquer
+la barre d'URL APK. À vérifier côté Android.
+
+### 🟡 Priorité 5 — Rebuild APK
+
+Après plusieurs fixes, regénérer l'APK via PWABuilder.
+
+## 📝 NOTES DÉTAILLÉES POUR PLUS TARD
+
+### RACCOURCI AGENDA PENDANT UN APPEL (SIM 2)
+
+Idée notée le 20/09/2026.
+
+⚠️ IMPOSSIBLE en l'état (PWA/TWA) :
+- TWA ne lit pas l'état du téléphone
+- Aucune permission Android (READ_PHONE_STATE)
+- Restrictions Android 10+ sur lancement en arrière-plan
+- Pas d'API pour ajouter un bouton dans l'écran d'appel natif
+- Fossify Phone ne le permet pas non plus
+- Truecaller utilise un overlay, pas une modif native
+
+Solutions possibles :
+
+1. 🟢 Raccourci d'écran d'accueil vers `#agenda`
+   - Nécessite d'ajouter le hash d'URL dans le Router
+   - Le plus simple et fiable
+
+2. 🟡 MacroDroid / Tasker
+   - Règle "Appel entrant SIM 2 → Ouvrir URL"
+   - Permission d'accessibilité requise
+   - Fiabilité variable selon téléphone
+   - Quitte l'écran d'appel (pas idéal)
+
+3. 🔴 Vraie app Android native
+   - Chantier énorme, perd l'avantage web partagé
+   - À éviter sauf besoin critique
+
+⚠️ Avant de coder : clarifier le vrai besoin.
+
+### AGENDA — AMÉLIORATIONS ET SYNCHRONISATION EXTERNE
+
+Idées notées le 20/09/2026. Plusieurs sous-chantiers liés.
+
+**1. Paramètres agenda configurables**
+- Jours d'intervention habituels
+- Heure de début/fin
+- Unité de lecture rapide par défaut (1 sem / 2 sem / 3 sem / 1 mois)
+
+**2. Aide à la prise de RDV**
+- Proposer les prochains créneaux libres selon :
+  jours d'intervention + heures + RDV déjà pris
+- Afficher les créneaux libres les plus proches
+
+**3. Import agendas externes (ICS)**
+- Import fichiers .ics (Google Calendar, Proton)
+- Voir les RDV perso pour éviter conflits
+- Alerte si un RDV perso tombe un jour d'intervention
+
+**4. Lecture rapide agenda**
+- Vue condensée 1 / 2 / 3 semaines ou 1 mois
+- Durée par défaut paramétrable
+
+**5. Synchronisation avec Fossify Agenda**
+- Export .ics manuel (déjà en place)
+- Abonnement URL .ics (Fossify → GitHub Pages)
+- Import réciproque pour RDV perso
+- ⚠️ À vérifier : Fossify Agenda supporte-t-il
+  l'abonnement URL .ics ?
+
+**Points à clarifier :**
+- Combien de créneaux libres proposer ?
+- Heures de fin fixes ou variables ?
+- Jours fériés ?
+- Priorité : 1 → 2 → 3 → 4 → 5
+
+### ACHATS BÉNÉVOLES À REMBOURSER
+
+Bénévole avance un achat, enregistré comme "à rembourser"
+jusqu'au paiement du bureau.
+
+SQL :
+ALTER TABLE entries ADD COLUMN IF NOT EXISTS statut TEXT DEFAULT 'validee';
+ALTER TABLE entries ADD COLUMN IF NOT EXISTS benevole_rembourser TEXT;
+ALTER TABLE entries ADD COLUMN IF NOT EXISTS fournisseur TEXT;
+ALTER TABLE entries ADD COLUMN IF NOT EXISTS date_remboursement TIMESTAMPTZ;
+ALTER TABLE entries ADD COLUMN IF NOT EXISTS mode_remboursement TEXT;
+ALTER TABLE entries ADD COLUMN IF NOT EXISTS note_remboursement TEXT;
+
+Modifs Compta :
+- Case "Achat avancé par un bénévole"
+- Champs Bénévole + Fournisseur
+- Statut en_attente par défaut
+- 5ᵉ carte "⏳ À rembourser" cliquable
+- Colonne Statut + filtre grand tableau
+- Bouton "✅ Rembourser" sur les en_attente
+- Modale remboursement (date + mode + note)
+
+Modifs Frais :
+- Bandeau "💳 Achats de bénévoles à rembourser →"
+
+### CALCUL DISTANCES — AMÉLIORER PLUS TARD
+
+OSRM calcule 12 km là où Google Maps dit 8 km.
+Solution : Mapbox (gratuit 100k req/mois).
+Alternative : coefficient correcteur dans Paramètres.
+
+### SYNCHRO CALENDRIER EXTERNE (général)
+
+- Proton Calendar ne supporte pas CalDAV
+- Solutions : import .ics, abonnement URL .ics via
+  GitHub Pages, ou calendrier CalDAV (Google, Apple, Nextcloud)
+
+### NOTES TECHNIQUES DIVERS
+
+- "Notifier" est référencé dans Parametres.exportJSON mais
+  absent. Fallback fonctionne (typeof undefined).
+- sw.js : network-first pour HTML, cache-first pour le reste.
+- manifest.json : display standalone, theme #0f172a.
+- Router : utilise localStorage `bricobol_active_view`,
+  PAS le hash d'URL (à ajouter).
+
+### AUTRES IDÉES NOTÉES
+
+- Excel sur Cotisations / Dons / Frais / Annuaire
+- Synchro temps réel (WebSocket)
+- PDF propre documents
+- Graphiques Dashboard
+- Recherche globale
+- Statistiques par type / mois / bénévole
+- Import HelloAsso
+- Notifications push
+- Widget Android
+- Vue semaine dans Tournée
+- Onglet "En retard" dans Missions
+- Historique des changements de statut
+- Carte géographique des interventions
+
+## COMMENT REPRENDRE APRÈS UNE PAUSE
+
+1. Coller ce fichier
+2. Dire "On continue le projet BricoBol"
+3. Préciser si on est sur PC (VS Code) ou mobile (Acode)
+4. Dire la priorité (ex : "Fusion Tournée → Missions session 1")
+
+## COMMENT DEMANDER UNE MODIF
+
+Format : "Dans [module], [ce que je veux]."
+Ex : "Dans Missions, fusionner avec Aujourd'hui"
+L'IA proposera un plan en mots AVANT de coder.
+
+================================================================

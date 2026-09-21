@@ -3065,7 +3065,9 @@ const Missions = {
     const tab = this.currentTab;
     let list = this.getAll();
 
-    if (tab === 'toutes') {
+    if (tab === 'aujourdhui') {
+      list = [];
+    } else if (tab === 'toutes') {
       list = list.filter(i => this._statutsToutes().includes(i.statut));
     } else if (tab === 'a_prendre') {
       list = list.filter(i => i.statut === 'demande');
@@ -3089,6 +3091,7 @@ const Missions = {
   _compterParTab() {
     const all = this.getAll();
     return {
+      aujourdhui: 0,
       toutes: all.filter(i => this._statutsToutes().includes(i.statut)).length,
       a_prendre: all.filter(i => i.statut === 'demande').length,
       en_cours: all.filter(i => i.statut === 'prise' || i.statut === 'en_cours' || i.statut === 'planifiee').length,
@@ -3112,6 +3115,7 @@ const Missions = {
     const list = this.getMissions();
 
     const tabs = [
+      { val: 'aujourdhui', label: '📅 Aujourd\'hui', count: compteurs.aujourdhui },
       { val: 'toutes',     label: 'Toutes',         count: compteurs.toutes },
       { val: 'a_prendre',  label: '🔵 À prendre',   count: compteurs.a_prendre },
       { val: 'en_cours',   label: '🟠 En cours',    count: compteurs.en_cours },
@@ -3130,6 +3134,16 @@ const Missions = {
       </div>
     `;
 
+    if (this.currentTab === 'aujourdhui') {
+      container.innerHTML = html + `
+        <div class="card" style="text-align:center;padding:60px 24px;">
+          <div style="font-size:3rem;margin-bottom:16px;">🚧</div>
+          <h3 style="font-size:1.1rem;font-weight:800;margin-bottom:8px;">En construction</h3>
+          <p style="color:var(--text-light);font-size:.9rem;">Cet onglet affichera bientôt la vue Aujourd'hui (Matin / Après-midi / Soir / Retard / Relancer).</p>
+        </div>
+      `;
+      return;
+    }
     if (list.length === 0) {
       html += `
         <div class="card" style="text-align:center;padding:60px 24px;">
