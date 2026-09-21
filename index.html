@@ -6665,11 +6665,11 @@ const Interventions = {
       ${fraisHTML}
       ${donsHTML}
       <div class="adh-detail-section"><h4>Service</h4><p><strong>${Utils.escapeHtml(i.type)}</strong></p></div>
-      <div class="adh-detail-section"><h4>Demandeur</h4><p>👤 ${Utils.escapeHtml(i.demandeur)}</p></div>
+      <div class="adh-detail-section"><h4>Demandeur</h4><p>👤 ${Utils.escapeHtml(i.demandeur)} <button class="btn" style="padding:2px 8px;font-size:.75rem;background:var(--info);margin-left:6px;" onclick="Interventions.messageContact('${Utils.escapeHtml(i.demandeur)}')" title="Envoyer un message">✉️</button></p></div>
       <div class="adh-detail-section"><h4>Description</h4><p style="white-space:pre-wrap;">${Utils.escapeHtml(i.description)}</p></div>
       <div class="adh-detail-section">
         <h4>Assignation</h4>
-        <p>Bénévole : ${i.benevole ? Utils.escapeHtml(i.benevole) : '<em>Non assigné</em>'}</p>
+        <p>Bénévole : ${i.benevole ? Utils.escapeHtml(i.benevole) : '<em>Non assigné</em>'}${i.benevole ? ` <button class="btn" style="padding:2px 8px;font-size:.75rem;background:var(--info);margin-left:6px;" onclick="Interventions.messageContact('${Utils.escapeHtml(i.benevole)}')" title="Envoyer un message">✉️</button>` : ''}</p>
         ${datePrevueAffiche ? `<p>${datePrevueAffiche}</p>` : ''}
         ${dateRealiseeAffiche ? `<p>${dateRealiseeAffiche}</p>` : ''}
       </div>
@@ -6750,6 +6750,29 @@ const Interventions = {
     }
     this.closeDetail();
     Dons.openForm(null, { adherentId: i.adherentId, interventionNumero: i.numero });
+  },
+  messageContact(nom) {
+    if (!nom) { alert('Aucun nom à rechercher.'); return; }
+    if (typeof Adherents === 'undefined' || !Adherents.ouvrirMessageModal) {
+      alert('Module Annuaire indisponible.');
+      return;
+    }
+    const nomCherche = nom.toLowerCase().trim();
+    const contact = Adherents.getAll().find(a => {
+      const complet = `${a.prenom || ''} ${a.nom || ''}`.toLowerCase().trim();
+      const inverse = `${a.nom || ''} ${a.prenom || ''}`.toLowerCase().trim();
+      return complet === nomCherche || inverse === nomCherche;
+    });
+    if (!contact) {
+      alert('Aucun contact trouvé dans l\'annuaire pour : ' + nom);
+      return;
+    }
+    if (!contact.email && !contact.tel) {
+      alert('Ce contact n\'a ni email ni téléphone.');
+      return;
+    }
+        this.closeDetail();
+    Adherents.ouvrirMessageModal(contact.id);
   },
 
   closeDetail() { document.getElementById('interventionDetailModal').classList.remove('active'); },
