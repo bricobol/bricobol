@@ -100,6 +100,7 @@ body{background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;o
 .adh-card-actions a,.adh-card-actions button{border:none;border-radius:8px;padding:8px;cursor:pointer;font-size:.95rem;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;min-width:36px;height:36px;transition:var(--transition);color:#fff}
 .adh-btn-call{background:var(--info)}
 .adh-btn-sms{background:var(--purple)}
+.adh-btn-msg{background:var(--info)}
 .adh-btn-gps{background:var(--orange)}
 .adh-btn-edit{background:var(--accent)}
 .adh-btn-del{background:var(--danger)}
@@ -4439,6 +4440,7 @@ console.log('🔥 SAVE — prenom lu =', document.getElementById('adhPrenom').va
     const nomAffiche = Utils.escapeHtml(this.getNom(a));
     const tel = a.tel ? `<a href="tel:${Utils.escapeHtml(a.tel)}" class="adh-btn-call" onclick="event.stopPropagation();" title="Appeler">📞</a>` : '';
     const sms = a.tel ? `<a href="sms:${Utils.escapeHtml(a.tel)}" class="adh-btn-sms" onclick="event.stopPropagation();" title="SMS">💬</a>` : '';
+        const msg = (a.email || a.tel) ? `<button class="adh-btn-msg" onclick="event.stopPropagation();Adherents.ouvrirMessageModal(${a.id})" title="Envoyer un message">✉️</button>` : '';
     const gps = a.adresse ? `<button class="adh-btn-gps" onclick="event.stopPropagation();BricoBol.openGpsPopup('${Utils.escapeHtml(a.adresse + ', ' + (a.cp||'') + ' ' + (a.ville||''))}')" title="GPS">📍</button>` : '';
     const exp = a.dateExpiration ? `Exp: ${Utils.formatDate(a.dateExpiration)}` : '';
     const yapla = a.yaplaId ? ` · Yapla ${Utils.escapeHtml(a.yaplaId)}` : '';
@@ -4496,7 +4498,7 @@ console.log('🔥 SAVE — prenom lu =', document.getElementById('adhPrenom').va
           </div>
         </div>
         <div class="adh-card-actions">
-          ${tel}${sms}${gps}
+          ${tel}${sms}${msg}${gps}
           <button class="adh-btn-edit" onclick="event.stopPropagation();Adherents.openForm(${a.id})" title="Modifier">✏️</button>
           <button class="adh-btn-del" onclick="event.stopPropagation();Adherents.remove(${a.id})" title="Supprimer">🗑️</button>
         </div>
@@ -4722,6 +4724,7 @@ console.log('🔥 SAVE — prenom lu =', document.getElementById('adhPrenom').va
         <button class="btn btn-secondary" onclick="Adherents.closeDetail();Adherents.openForm(${a.id});">✏️ Modifier</button>
         ${a.tel ? `<a class="btn" style="background:var(--info);" href="tel:${Utils.escapeHtml(a.tel)}">📞 Appeler</a>` : ''}
         ${a.tel ? `<a class="btn" style="background:var(--purple);" href="sms:${Utils.escapeHtml(a.tel)}">💬 SMS</a>` : ''}
+                ${(a.email || a.tel) ? `<button class="btn" style="background:var(--info);" onclick="Adherents.closeDetail();Adherents.ouvrirMessageModal(${a.id});">✉️ Message</button>` : ''}
         ${fullAddr ? `<button class="btn" style="background:var(--accent);" onclick="BricoBol.openGpsPopup('${Utils.escapeHtml(fullAddr)}')">📍 GPS</button>` : ''}
         <button class="btn btn-danger" onclick="Adherents.remove(${a.id})">🗑️ Supprimer</button>
       </div>`;
@@ -12115,18 +12118,21 @@ const Parametres = {
     this.saveParam(p);
     this.renderCompetences();
   },
-  renderModelesMessages() {
+    renderModelesMessages() {
     const c = document.getElementById('paramModelesMessages');
     if (!c) return;
     const p = this.getParam();
     const ms = p.modelesMessages || [];
     if (ms.length === 0) {
-      c.innerHTML = '<div style="color:var(--text-light);font-size:.85rem;padding:8px;">Aucun modèle.</div>';
+      c.innerHTML = '<div style="color:var(--text-light);font-size:.85rem;padding:8px;">Aucun modèle. Cliquez sur ➕ Ajouter pour en créer un.</div>';
       return;
     }
     c.innerHTML = ms.map((m, i) => `
       <div style="border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px;background:#f8fafc;">
-        <div style="font-weight:700;font-size:.9rem;margin-bottom:8px;">${Utils.escapeHtml(m.label)}</div>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;">
+          <input type="text" class="modeleTitre" data-idx="${i}" value="${Utils.escapeHtml(m.label || '')}" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:.9rem;font-weight:700;">
+          <button type="button" onclick="Parametres.supprimerModeleMessage(${i})" style="background:var(--danger);color:#fff;border:none;border-radius:6px;padding:8px 12px;cursor:pointer;font-size:.85rem;" title="Supprimer ce modèle">✖️</button>
+        </div>
         <div class="form-group">
           <label style="font-size:.78rem;">Sujet (email)</label>
           <input type="text" class="modeleSujet" data-idx="${i}" value="${Utils.escapeHtml(m.sujet || '')}" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;">
@@ -12136,7 +12142,64 @@ const Parametres = {
           <textarea class="modeleCorps" data-idx="${i}" rows="4" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;font-family:inherit;">${Utils.escapeHtml(m.corps || '')}</textarea>
         </div>
       </div>
-    `).join('');
+    `).join('') + `
+      <button type="button" class="btn" onclick="Parametres.ajouterModeleMessage()" style="width:100%;margin-top:8px;background:var(--success);">➕ Ajouter un modèle</button>
+    `;
+  },
+
+  ajouterModeleMessage() {
+    const msg = `Type de modèle à créer :
+
+1. Court (messages simples)
+2. Formel (messages officiels)
+
+Tapez 1 ou 2 :`;
+    const choix = prompt(msg, '1');
+    if (choix === null) return;
+    const p = this.getParam();
+    p.modelesMessages = p.modelesMessages || [];
+    let nouveau;
+    if (choix === '2') {
+      nouveau = {
+        id: 'modele_' + Date.now(),
+        label: 'Nouveau modèle formel',
+        sujet: '',
+        corps: `Bonjour {prenom} {nom},
+
+[votre message]
+
+Nous restons à votre disposition pour toute question.
+
+Cordialement,
+L'équipe {asso}
+{site}`
+      };
+    } else {
+      nouveau = {
+        id: 'modele_' + Date.now(),
+        label: 'Nouveau modèle court',
+        sujet: '',
+        corps: `Bonjour {prenom},
+
+[votre message]
+
+Cordialement,
+{asso}`
+      };
+    }
+    p.modelesMessages.push(nouveau);
+    this.saveParam(p);
+    this.renderModelesMessages();
+  },
+
+  supprimerModeleMessage(i) {
+    const p = this.getParam();
+    const m = (p.modelesMessages || [])[i];
+    if (!m) return;
+    if (!confirm('Supprimer le modèle "' + (m.label || 'sans titre') + '" ?')) return;
+    p.modelesMessages.splice(i, 1);
+    this.saveParam(p);
+    this.renderModelesMessages();
   },
   resetCompetences() { if (!confirm('Réinitialiser ?')) return; const p = this.getParam(); p.competences = JSON.parse(JSON.stringify(this.COMPETENCES_DEFAUT)); this.saveParam(p); this.renderCompetences(); },
   resetEngagements() { if (!confirm('Réinitialiser ?')) return; const p = this.getParam(); p.engagements = JSON.parse(JSON.stringify(this.ENGAGEMENTS_DEFAUT)); this.saveParam(p); this.renderEngagements(); },
@@ -12227,6 +12290,10 @@ const Parametres = {
     p.signatureMessage = document.getElementById('paramSignatureMessage').value.trim() || "L'équipe BricoBol – aide solidaire";
     p.lienSiteMessage = document.getElementById('paramLienSiteMessage').value.trim() || 'https://sites.google.com/view/bricobol';
     p.modelesMessages = p.modelesMessages || [];
+        document.querySelectorAll('.modeleTitre').forEach(el => {
+      const i = parseInt(el.dataset.idx);
+      if (p.modelesMessages && p.modelesMessages[i]) p.modelesMessages[i].label = el.value;
+    });
     document.querySelectorAll('.modeleSujet').forEach(el => {
       const i = parseInt(el.dataset.idx);
       if (p.modelesMessages[i]) p.modelesMessages[i].sujet = el.value;
