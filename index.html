@@ -4742,6 +4742,153 @@ console.log('🔥 SAVE — prenom lu =', document.getElementById('adhPrenom').va
 
   closeImport() { document.getElementById('importExcelModal').classList.remove('active'); },
 
+  // ============================================================
+  // ✉️ ENVOI DE MESSAGES
+  // ============================================================
+
+  ouvrirMessageModal(adherentId) {
+    if (typeof Router !== 'undefined' && Router.mountIfNeeded && Router.registry['adherents']) {
+      Router.mountIfNeeded('adherents', Router.registry['adherents']);
+    }
+    const adh = this.getAll().find(a => String(a.id) === String(adherentId));
+    if (!adh) { alert('Contact introuvable.'); return; }
+
+    document.getElementById('messageAdhId').value = adh.id;
+    document.getElementById('messageDestinataire').textContent = this.getNom(adh);
+
+    const coords = [];
+    if (adh.email) coords.push('📧 ' + adh.email);
+    if (adh.tel) coords.push('📞 ' + adh.tel);
+    document.getElementById('messageCoordonnees').textContent = coords.length > 0 ? coords.join(' · ') : '⚠️ Aucun email ni téléphone renseigné';
+
+    // Remplir la liste des modèles
+    const p = Parametres.getParam();
+    const ms = p.modelesMessages || [];
+    const sel = document.getElementById('messageModele');
+    sel.innerHTML = ms.map((m, i) => `<option value="${i}">${Utils.escapeHtml(m.label)}</option>`).join('');
+
+    // Canal par défaut : email si dispo, sinon SMS
+    const canalSel = document.getElementById('messageCanal');
+    if (adh.email) canalSel.value = 'email';
+    else if (adh.tel) canalSel.value = 'sms';
+    else canalSel.value = 'email';
+
+    this._messageAdhCourant = adh;
+    this._majMessagePreview();
+    document.getElementById('messageModal').classList.add('active');
+  },
+
+  fermerMessageModal() {
+    document.getElementById('messageModal').classList.remove('active');
+    this._messageAdhCourant = null;
+  },
+
+  _appliquerVariables(texte, adh) {
+    if (!texte) return '';
+    const p = Parametres.getParam();
+    const map = {
+      '{prenom}': adh.prenom || '',
+      '{nom}': adh.nom || '',
+      '{date}': '',
+      '{heure}': '',
+      '{asso}': p.nomAssociation || 'BricoBol',
+      '{site}': p.lienSiteMessage || 'https://sites.google.com/view/bricobol'
+    };
+    let out = texte;
+    Object.keys(map).forEach(k => {
+      out = out.split(k).join(map[k]);
+    });
+    return out;
+  },
+
+  _majMessagePreview() {
+    const adh = this._messageAdhCourant;
+    if (!adh) return;
+
+    const p = Parametres.getParam();
+    const ms = p.modelesMessages || [];
+    const idx = parseInt(document.getElementById('messageModele').value) || 0;
+    const modele = ms[idx];
+    const canal = document.getElementById('messageCanal').value;
+
+    // Objet (masqué si SMS seul)
+    const objetGroup = document.getElementById('messageObjetGroup');
+    objetGroup.style.display = canal === 'sms' ? 'none' : 'block';
+
+    // Corps
+    const signature = p.signatureMessage || "L'équipe BricoBol – aide solidaire";
+    const lienSite = p.lienSiteMessage || 'https://sites.google.com/view/bricobol';
+    const corpsModele = this._appliquerVariables(modele ? modele.corps : '', adh);
+    const signatureComplete = '\n\n' + signature + '\n' + lienSite;
+    document.getElementById('messageCorps').value = corpsModele + signatureComplete;
+
+    // Objet
+    if (modele && modele.sujet) {
+      document.getElementById('messageObjet').value = this._appliquerVariables(modele.sujet, adh);
+    } else {
+      document.getElementById('messageObjet').value = '';
+    }
+
+    // Aperçu + avertissements
+    const apercu = document.getElementById('messageApercu');
+    const avert = [];
+    if ((canal === 'email' || canal === 'both') && !adh.email) avert.push('⚠️ Pas d\'email renseigné');
+    if ((canal === 'sms' || canal === 'both') && !adh.tel) avert.push('⚠️ Pas de téléphone renseigné');
+    const corps = document.getElementById('messageCorps').value;
+    const nbCar = corps.length;
+    apercu.innerHTML = avert.length > 0
+      ? '<span style="color:var(--danger);">' + avert.join(' · ') + '</span>'
+      : (canal === 'sms' || canal === 'both'
+        ? '📏 ' + nbCar + ' caractères (' + Math.ceil(nbCar / 160) + ' SMS)'
+        : '📏 ' + nbCar + ' caractères');
+  },
+
+  envoyerMessage() {
+    const adh = this._messageAdhCourant;
+    if (!adh) return;
+    const canal = document.getElementById('messageCanal').value;
+    const objet = document.getElementById('messageObjet').value.trim();
+    const corps = document.getElementById('messageCorps').value;
+
+    if (!corps.trim()) { alert('Le message est vide.'); return; }
+
+    let emailEnvoye = false;
+    let smsEnvoye = false;
+
+    if ((canal === 'email' || canal === 'both') && adh.email) {
+      const url = 'mailto:' + encodeURIComponent(adh.email)
+        + '?subject=' + encodeURIComponent(objet)
+        + '&body=' + encodeURIComponent(corps);
+      window.open(url, '_blank');
+      emailEnvoye = true;
+    }
+
+    if (canal === 'sms' || canal === 'both') {
+      if (adh.tel) {
+        if (emailEnvoye) {
+          // Canal "both" : on attend un peu pour laisser l'email s'ouvrir
+          setTimeout(() => {
+            const tel = String(adh.tel).replace(/[^+0-9]/g, '');
+            const url = 'sms:' + tel + '?body=' + encodeURIComponent(corps);
+            window.open(url, '_blank');
+          }, 800);
+        } else {
+          const tel = String(adh.tel).replace(/[^+0-9]/g, '');
+          const url = 'sms:' + tel + '?body=' + encodeURIComponent(corps);
+          window.open(url, '_blank');
+        }
+        smsEnvoye = true;
+      }
+    }
+
+    if (!emailEnvoye && !smsEnvoye) {
+      alert('Aucun canal disponible : le contact n\'a ni email ni téléphone.');
+      return;
+    }
+
+    this.fermerMessageModal();
+  },
+
   _detecterType(headers) {
     const h = headers.join(' ').toLowerCase();
     if (h.includes('numéro de donateur') && h.includes('montant total des dons')) return 'donateurs';
@@ -5315,6 +5462,55 @@ console.log('🔥 SAVE — prenom lu =', document.getElementById('adhPrenom').va
             <button class="close-btn" onclick="Adherents.closeDetail()">&times;</button>
           </div>
           <div class="modal-body" id="adherentDetailBody"></div>
+        </div>
+      </div>
+
+            <!-- Modale MESSAGE -->
+      <div class="modal" id="messageModal">
+        <div class="modal-content" style="max-width:620px;">
+          <div class="modal-header">
+            <h2>✉️ Envoyer un message</h2>
+            <button class="close-btn" onclick="Adherents.fermerMessageModal()">&times;</button>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" id="messageAdhId">
+
+            <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:12px;margin-bottom:14px;">
+              <div style="font-size:.75rem;color:#1e40af;text-transform:uppercase;font-weight:700;">Destinataire</div>
+              <div style="font-size:1rem;font-weight:800;margin-top:4px;" id="messageDestinataire">—</div>
+              <div style="font-size:.82rem;color:var(--text-light);margin-top:4px;" id="messageCoordonnees">—</div>
+            </div>
+
+            <div class="form-group">
+              <label>Modèle</label>
+              <select id="messageModele" onchange="Adherents._majMessagePreview()"></select>
+            </div>
+
+            <div class="form-group">
+              <label>Canal</label>
+              <select id="messageCanal" onchange="Adherents._majMessagePreview()">
+                <option value="email">📧 Email</option>
+                <option value="sms">💬 SMS</option>
+                <option value="both">📧💬 Les deux</option>
+              </select>
+            </div>
+
+            <div class="form-group" id="messageObjetGroup">
+              <label>Objet</label>
+              <input type="text" id="messageObjet" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:.92rem;font-family:inherit;">
+            </div>
+
+            <div class="form-group">
+              <label>Message</label>
+              <textarea id="messageCorps" rows="8" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:.88rem;"></textarea>
+              <div id="messageApercu" style="font-size:.78rem;color:var(--text-light);margin-top:6px;"></div>
+            </div>
+
+            <div style="display:flex;gap:10px;margin-top:14px;">
+              <button type="button" class="btn" style="flex:1;background:var(--accent);" onclick="Adherents.envoyerMessage()">📤 Envoyer</button>
+              <button type="button" class="btn btn-ghost" onclick="Adherents.fermerMessageModal()">Annuler</button>
+            </div>
+          </div>
         </div>
       </div>
 
