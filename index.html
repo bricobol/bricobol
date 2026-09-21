@@ -1096,6 +1096,14 @@ const Router = {
 
     this.currentView = viewName;
 
+    // Met à jour le hash d'URL sans déclencher hashchange
+    try {
+      const hashCible = '#' + viewName;
+      if (window.location.hash !== hashCible) {
+        history.replaceState(null, '', hashCible);
+      }
+    } catch (e) {}
+
     // ✅ Passe les params à onShow
     if (module.onShow) module.onShow(params);
   },
@@ -1117,11 +1125,22 @@ const Router = {
     if (module.mount) module.mount();
   },
 
+  _getViewFromHash() {
+    const hash = (window.location.hash || '').replace(/^#/, '');
+    if (!hash) return null;
+    return this.registry[hash] ? hash : null;
+  },
+
   init() {
     this.buildMenu();
+    const hashView = this._getViewFromHash();
     const saved = localStorage.getItem('bricobol_active_view') || 'dashboard';
-    const target = this.registry[saved] ? saved : 'dashboard';
+    const target = hashView || (this.registry[saved] ? saved : 'dashboard');
     this.go(target);
+    window.addEventListener('hashchange', () => {
+      const h = this._getViewFromHash();
+      if (h && h !== this.currentView) this.go(h);
+    });
   }
 };
 </script>

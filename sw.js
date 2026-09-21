@@ -3,7 +3,7 @@
 // Cache l'app pour hors-ligne + mises à jour auto
 // ============================================================
 
-const CACHE = 'bricobol-v10';
+const CACHE = 'bricobol-v11';
 const ASSETS = ['/', '/bricobol/', '/bricobol/index.html', '/bricobol/manifest.json', '/bricobol/icon.svg'];
 
 self.addEventListener('install', (e) => {

@@ -15,5 +15,35 @@
     { "src": "android-chrome-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "android-chrome-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
     { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Agenda",
+      "short_name": "Agenda",
+      "description": "Voir l'agenda",
+      "url": "/bricobol/#agenda",
+      "icons": [{ "src": "android-chrome-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Missions",
+      "short_name": "Missions",
+      "description": "Prise en charge des interventions",
+      "url": "/bricobol/#missions",
+      "icons": [{ "src": "android-chrome-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Frais",
+      "short_name": "Frais",
+      "description": "Déplacements et remboursements",
+      "url": "/bricobol/#frais",
+      "icons": [{ "src": "android-chrome-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Cotisations",
+      "short_name": "Cotisations",
+      "description": "Encaisser et valider les cotisations",
+      "url": "/bricobol/#cotisations",
+      "icons": [{ "src": "android-chrome-192x192.png", "sizes": "192x192" }]
+    }
   ]
 }
