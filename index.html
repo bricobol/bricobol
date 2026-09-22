@@ -1568,6 +1568,25 @@ const BricoBol = {
     if (p) p.classList.remove('active');
   },
 
+  ensureModuleMounted(viewName) {
+    if (typeof Router === 'undefined' || !Router.registry[viewName]) return;
+    const module = Router.registry[viewName];
+    if (!document.getElementById('view-' + viewName) && module.getViewHTML) {
+      document.getElementById('contentArea').insertAdjacentHTML('beforeend', module.getViewHTML());
+      if (module.mount) module.mount();
+    }
+    if (module.getModalsHTML) {
+      const modalHTML = module.getModalsHTML();
+      if (modalHTML) {
+        const ids = [...modalHTML.matchAll(/id="([^"]+)"/g)].map(m => m[1]);
+        const dejaPresents = ids.filter(id => document.getElementById(id));
+        if (dejaPresents.length === 0 && ids.length > 0) {
+          document.getElementById('modalsContainer').insertAdjacentHTML('beforeend', modalHTML);
+        }
+      }
+    }
+  },
+
   updateStorageInfo() {
     const info = document.getElementById('storageInfo');
     if (!info) return;
@@ -2509,6 +2528,8 @@ const Tournee = {
         const i = Interventions.getAll().find(x => x.id === intId);
         return {
           numero: i ? i.numero : 'INT-???',
+          nom: i ? i.demandeur : '',
+          type: i ? i.type : '',
           kmIndividuel: kmIndividuels[k],
           part: parts[k]
         };
@@ -2592,14 +2613,16 @@ const Tournee = {
                 <tr style="border-bottom:1px solid #e2e8f0;">
                   <th style="text-align:left;padding:4px 2px;font-size:.72rem;color:#64748b;">Intervention</th>
                   <th style="text-align:right;padding:4px 2px;font-size:.72rem;color:#64748b;">Km seul</th>
+                  <th style="text-align:right;padding:4px 2px;font-size:.72rem;color:#64748b;">Prix seul</th>
                   <th style="text-align:right;padding:4px 2px;font-size:.72rem;color:#64748b;">Part</th>
                 </tr>
               </thead>
               <tbody>
                 ${interventionsArr.map(r => `
                   <tr style="border-bottom:1px solid #f1f5f9;">
-                    <td style="padding:6px 2px;font-weight:600;">${Utils.escapeHtml(r.numero)}</td>
+                    <td style="padding:6px 2px;font-weight:600;font-size:.78rem;">${Utils.escapeHtml(r.numero)}${r.nom ? ' · ' + Utils.escapeHtml(r.nom) : ''}${r.type ? '<br><span style="font-weight:400;color:#64748b;">' + Utils.escapeHtml(r.type) + '</span>' : ''}</td>
                     <td style="text-align:right;padding:6px 2px;">${r.kmIndividuel} km</td>
+                    <td style="text-align:right;padding:6px 2px;color:#64748b;">${(r.kmIndividuel * bareme).toFixed(2)} €</td>
                     <td style="text-align:right;padding:6px 2px;color:#2563eb;font-weight:700;">${r.part.toFixed(2)} €</td>
                   </tr>
                 `).join('')}
@@ -2608,6 +2631,7 @@ const Tournee = {
                 <tr style="border-top:2px solid #86efac;font-weight:800;">
                   <td style="padding:6px 2px;">TOTAL</td>
                   <td style="text-align:right;padding:6px 2px;">${totalKmInd} km</td>
+                  <td style="text-align:right;padding:6px 2px;color:#64748b;">${totalVirtuel.toFixed(2)} €</td>
                   <td style="text-align:right;padding:6px 2px;color:#166534;">${sommeParts.toFixed(2)} €</td>
                 </tr>
               </tfoot>
@@ -2643,7 +2667,9 @@ const Tournee = {
       `;
       if (statut) statut.innerHTML = msg;
 
-      btn.textContent = '✅ Terminé';
+      btn.textContent = '✅ Fermer';
+      btn.disabled = false;
+      btn.onclick = () => Tournee.fermerCalculFrais();
     } catch (e) {
       console.error(e);
       setStatut('❌ Erreur : ' + e.message, 'var(--danger)');
@@ -3244,20 +3270,17 @@ const Missions = {
   },
 
   nouvelleIntervention() {
-    if (typeof Router !== 'undefined' && Router.registry['interventions']) {
-      const module = Router.registry['interventions'];
-      if (!document.getElementById('interventionFormModal') && module.getModalsHTML) {
-        const modalsHTML = module.getModalsHTML();
-        if (modalsHTML) {
-          document.getElementById('modalsContainer').insertAdjacentHTML('beforeend', modalsHTML);
-        }
-      }
-      if (!document.getElementById('view-interventions') && module.getViewHTML) {
-        document.getElementById('contentArea').insertAdjacentHTML('beforeend', module.getViewHTML());
-        if (module.mount) module.mount();
-      }
-    }
+    BricoBol.ensureModuleMounted('interventions');
     if (typeof Interventions !== 'undefined') Interventions.openForm();
+  },
+
+  ouvrirCalculFrais(idOptionnel) {
+    if (typeof Tournee === 'undefined') { alert('Module Tournée indisponible.'); return; }
+    if (!document.getElementById('tourneeFraisModal') && Tournee.getModalsHTML) {
+      const html = Tournee.getModalsHTML();
+      if (html) document.getElementById('modalsContainer').insertAdjacentHTML('beforeend', html);
+    }
+    Tournee.ouvrirCalculFrais(idOptionnel);
   },
 
   _renderAujourdhui(container, tabsHTML) {
@@ -3359,6 +3382,7 @@ const Missions = {
           <button class="btn" style="padding:6px 12px;font-size:.78rem;background:var(--accent);flex:1;" onclick="Missions.openReporterModal(${i.id})">📅 Reporter</button>
           <button class="btn" style="padding:6px 12px;font-size:.78rem;background:#8b5cf6;flex:1;" onclick="Missions.openRelancerModal(${i.id})">🔔 Relancer</button>
           <button class="btn" style="padding:6px 12px;font-size:.78rem;background:#f97316;flex:1;" onclick="Missions.openAssignerModal(${i.id})">👤 Assigner</button>
+          <button class="btn" style="padding:6px 10px;font-size:.78rem;background:#0ea5e9;" onclick="Missions.ouvrirCalculFrais(${i.id})" title="Calculer les frais">🚗</button>
           <button class="btn btn-ghost" style="padding:6px 10px;font-size:.85rem;" onclick="Interventions.openDetail(${i.id})" title="Voir la fiche">👁️</button>
         </div>
       </div>
@@ -8812,21 +8836,28 @@ const Frais = {
               <tr style="border-bottom:1px solid var(--border);">
                 <th style="text-align:left;padding:6px 4px;">Intervention</th>
                 <th style="text-align:right;padding:6px 4px;">Km seul</th>
+                <th style="text-align:right;padding:6px 4px;">Prix seul</th>
                 <th style="text-align:right;padding:6px 4px;">Part</th>
               </tr>
             </thead>
             <tbody>
-              ${inter.map(r => `
-                <tr style="border-bottom:1px solid var(--border);">
-                  <td style="padding:6px 4px;font-weight:600;">${Utils.escapeHtml(r.numero)}</td>
-                  <td style="text-align:right;padding:6px 4px;">${r.kmIndividuel || 0} km</td>
-                  <td style="text-align:right;padding:6px 4px;color:var(--accent);font-weight:700;">${(r.part || 0).toFixed(2)} €</td>
-                </tr>`).join('')}
+              ${inter.map(r => {
+                const nom = r.nom || '';
+                const typ = r.type || '';
+                return `
+                  <tr style="border-bottom:1px solid var(--border);">
+                    <td style="padding:6px 4px;font-weight:600;font-size:.82rem;">${Utils.escapeHtml(r.numero)}${nom ? ' · ' + Utils.escapeHtml(nom) : ''}${typ ? '<br><span style="font-weight:400;color:var(--text-light);">' + Utils.escapeHtml(typ) + '</span>' : ''}</td>
+                    <td style="text-align:right;padding:6px 4px;">${r.kmIndividuel || 0} km</td>
+                    <td style="text-align:right;padding:6px 4px;color:var(--text-light);">${((r.kmIndividuel || 0) * (f.bareme || 0.40)).toFixed(2)} €</td>
+                    <td style="text-align:right;padding:6px 4px;color:var(--accent);font-weight:700;">${(r.part || 0).toFixed(2)} €</td>
+                  </tr>`;
+              }).join('')}
             </tbody>
             <tfoot>
               <tr style="border-top:2px solid var(--border);font-weight:700;">
                 <td style="padding:6px 4px;">TOTAL</td>
                 <td style="text-align:right;padding:6px 4px;">${totalKmInd} km</td>
+                <td style="text-align:right;padding:6px 4px;color:var(--text-light);">${totalVirtuel.toFixed(2)} €</td>
                 <td style="text-align:right;padding:6px 4px;color:var(--success);">${(f.montant || 0).toFixed(2)} €</td>
               </tr>
             </tfoot>
@@ -8837,7 +8868,13 @@ const Frais = {
           </div>
         </div>`;
     } else if (inter.length > 0) {
-      repartitionHTML = `<div class="adh-detail-section"><h4>Interventions liées</h4>${inter.map(n => `<p>🛠️ ${Utils.escapeHtml(typeof n === 'string' ? n : n.numero)}</p>`).join('')}</div>`;
+      repartitionHTML = `<div class="adh-detail-section"><h4>Interventions liées</h4>${inter.map(n => {
+        const num = typeof n === 'string' ? n : n.numero;
+        const info = Interventions.getAll().find(x => x.numero === num);
+        const nom = info ? info.demandeur : '';
+        const typ = info ? info.type : '';
+        return `<p>🛠️ <strong>${Utils.escapeHtml(num)}</strong>${nom ? ' · ' + Utils.escapeHtml(nom) : ''}${typ ? ' — ' + Utils.escapeHtml(typ) : ''}</p>`;
+      }).join('')}</div>`;
     }
 
     let rembHTML = '';
