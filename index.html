@@ -3124,6 +3124,69 @@ const Missions = {
     this.render();
   },
 
+  // ============================================================
+  // 📅 ONGLET AUJOURD'HUI — Fonctions utilitaires
+  // ============================================================
+
+  _statutsActifs() {
+    return ['demande', 'prise', 'planifiee', 'en_cours', 'relancer'];
+  },
+
+  getJour() {
+    const today = Utils.todayISO();
+    return this.getAll()
+      .filter(i => i.datePrevue === today && this._statutsActifs().includes(i.statut))
+      .sort((a, b) => (a.heurePrevue || '00:00').localeCompare(b.heurePrevue || '00:00'));
+  },
+
+  getEnRetard() {
+    const today = Utils.todayISO();
+    return this.getAll()
+      .filter(i => i.datePrevue && i.datePrevue < today && this._statutsActifs().includes(i.statut))
+      .sort((a, b) => (a.datePrevue || '').localeCompare(b.datePrevue || ''));
+  },
+
+  getARelancer() {
+    const today = Utils.todayISO();
+    return this.getAll()
+      .filter(i => {
+        if (!i.aRelancer || !i.aRelancer.dateRelance) return false;
+        return i.aRelancer.dateRelance <= today && this._statutsActifs().includes(i.statut);
+      })
+      .sort((a, b) => (a.aRelancer.dateRelance || '').localeCompare(b.aRelancer.dateRelance || ''));
+  },
+
+  _grouperParMoment(list) {
+    const matin = [], aprem = [], soir = [];
+    list.forEach(i => {
+      const h = i.heurePrevue || '00:00';
+      const hh = parseInt(h.split(':')[0]) || 0;
+      if (hh < 12) matin.push(i);
+      else if (hh < 18) aprem.push(i);
+      else soir.push(i);
+    });
+    return { matin, aprem, soir };
+  },
+
+  _compterBenevoles(list) {
+    const set = new Set();
+    list.forEach(i => {
+      if (i.benevole) set.add(i.benevole.toLowerCase().trim());
+      if (i.benevole2) set.add(i.benevole2.toLowerCase().trim());
+    });
+    return set.size;
+  },
+
+  _trouverBenevole(nom) {
+    if (!nom) return null;
+    const nomCherche = nom.toLowerCase().trim();
+    return Storage.getAdherents().find(a => {
+      const complet = `${a.prenom || ''} ${a.nom || ''}`.toLowerCase().trim();
+      const inverse = `${a.nom || ''} ${a.prenom || ''}`.toLowerCase().trim();
+      return complet === nomCherche || inverse === nomCherche;
+    }) || null;
+  },
+
   // ---------- Rendu ----------
 
   render() {
@@ -3154,13 +3217,7 @@ const Missions = {
     `;
 
     if (this.currentTab === 'aujourdhui') {
-      container.innerHTML = html + `
-        <div class="card" style="text-align:center;padding:60px 24px;">
-          <div style="font-size:3rem;margin-bottom:16px;">🚧</div>
-          <h3 style="font-size:1.1rem;font-weight:800;margin-bottom:8px;">En construction</h3>
-          <p style="color:var(--text-light);font-size:.9rem;">Cet onglet affichera bientôt la vue Aujourd'hui (Matin / Après-midi / Soir / Retard / Relancer).</p>
-        </div>
-      `;
+      this._renderAujourdhui(container, html);
       return;
     }
     if (list.length === 0) {
@@ -3176,6 +3233,128 @@ const Missions = {
     }
 
     container.innerHTML = html;
+  },
+
+  nouvelleIntervention() {
+    if (typeof Router !== 'undefined' && Router.registry['interventions']) {
+      const module = Router.registry['interventions'];
+      if (!document.getElementById('interventionFormModal') && module.getModalsHTML) {
+        const modalsHTML = module.getModalsHTML();
+        if (modalsHTML) {
+          document.getElementById('modalsContainer').insertAdjacentHTML('beforeend', modalsHTML);
+        }
+      }
+      if (!document.getElementById('view-interventions') && module.getViewHTML) {
+        document.getElementById('contentArea').insertAdjacentHTML('beforeend', module.getViewHTML());
+        if (module.mount) module.mount();
+      }
+    }
+    if (typeof Interventions !== 'undefined') Interventions.openForm();
+  },
+
+  _renderAujourdhui(container, tabsHTML) {
+    const jour = this.getJour();
+    const enRetard = this.getEnRetard();
+    const aRelancer = this.getARelancer();
+    const total = jour.length;
+
+    const idsAffiches = new Set([...enRetard.map(i => i.id), ...aRelancer.map(i => i.id)]);
+    const jourFiltre = jour.filter(i => !idsAffiches.has(i.id));
+
+    const nbBenevoles = this._compterBenevoles([...jour, ...enRetard, ...aRelancer]);
+
+    const dateLongue = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    const dateCapitalisee = dateLongue.charAt(0).toUpperCase() + dateLongue.slice(1);
+
+    let body = `
+      <div class="card" style="padding:16px;margin-bottom:16px;background:linear-gradient(135deg,#2563eb 0%,#1e40af 100%);color:#fff;border:none;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
+          <div>
+            <div style="font-size:.78rem;opacity:.85;text-transform:uppercase;letter-spacing:.05em;font-weight:700;">📅 Aujourd'hui</div>
+            <div style="font-size:1.3rem;font-weight:800;margin-top:4px;">${dateCapitalisee}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:1.6rem;font-weight:800;">${total} intervention${total > 1 ? 's' : ''}</div>
+            <div style="font-size:.85rem;opacity:.9;">${nbBenevoles} bénévole${nbBenevoles > 1 ? 's' : ''} mobilisé${nbBenevoles > 1 ? 's' : ''}</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    if (enRetard.length > 0) body += this._renderSectionJour('⚠️ En retard', enRetard, '#dc2626', '#fef2f2', '#fecaca');
+    if (aRelancer.length > 0) body += this._renderSectionJour('🔔 À relancer', aRelancer, '#8b5cf6', '#faf5ff', '#c4b5fd', true);
+
+    const groupes = this._grouperParMoment(jourFiltre);
+
+    if (jourFiltre.length === 0 && enRetard.length === 0 && aRelancer.length === 0) {
+      body += `
+        <div class="card" style="text-align:center;padding:60px 24px;">
+          <div style="font-size:3rem;margin-bottom:16px;">🎉</div>
+          <h3 style="font-size:1.15rem;font-weight:800;margin-bottom:8px;">Aucune intervention prévue aujourd'hui</h3>
+          <p style="color:var(--text-light);font-size:.9rem;max-width:400px;margin:0 auto 20px;">Profitez-en pour souffler, ou créez une intervention si besoin.</p>
+          <button class="btn" onclick="Missions.nouvelleIntervention()">➕ Nouvelle intervention</button>
+        </div>
+      `;
+    } else {
+      if (groupes.matin.length > 0) body += this._renderSectionJour('🌅 Matin', groupes.matin, '#0ea5e9', '#f0f9ff', '#bfdbfe');
+      if (groupes.aprem.length > 0) body += this._renderSectionJour('🌞 Après-midi', groupes.aprem, '#f59e0b', '#fffbeb', '#fcd34d');
+      if (groupes.soir.length > 0) body += this._renderSectionJour('🌙 Soir', groupes.soir, '#8b5cf6', '#faf5ff', '#c4b5fd');
+    }
+
+    container.innerHTML = tabsHTML + body;
+  },
+
+  _renderSectionJour(titre, list, color, bg, border, afficherRelance) {
+    return `
+      <div class="card" style="padding:14px;margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <h3 style="font-size:.95rem;font-weight:800;color:${color};margin:0;">${titre}</h3>
+          <span style="background:${bg};color:${color};border:1px solid ${border};padding:2px 10px;border-radius:12px;font-size:.72rem;font-weight:700;">${list.length}</span>
+        </div>
+        ${list.map(i => this._renderLigneJour(i, color, afficherRelance)).join('')}
+      </div>
+    `;
+  },
+
+  _renderLigneJour(i, color, afficherRelance) {
+    const heure = i.heurePrevue ? `⏰ ${Utils.escapeHtml(i.heurePrevue)}` : '⏰ (heure libre)';
+    const dateAffichee = i.datePrevue !== Utils.todayISO() ? `📅 ${Utils.formatDate(i.datePrevue)} · ` : '';
+    const statutInfo = (Interventions.STATUTS[i.statut] || { label: i.statut, badge: 'badge-neutral' });
+    const benev = i.benevole ? `🤝 ${Utils.escapeHtml(i.benevole)}` : '<em style="color:var(--text-light);">Pas de bénévole</em>';
+    const benev2 = i.benevole2 ? ` · 🤝 ${Utils.escapeHtml(i.benevole2)}` : '';
+    const relance = (afficherRelance && i.aRelancer)
+      ? `<div style="margin-top:6px;padding:6px 10px;background:#fef3c7;border-radius:6px;font-size:.78rem;color:#92400e;">
+          🔔 <strong>${Utils.escapeHtml(i.aRelancer.quoi || 'À relancer')}</strong>
+          ${i.aRelancer.dateRelance ? ' · prévu le ' + Utils.formatDate(i.aRelancer.dateRelance) : ''}
+        </div>`
+      : '';
+
+    return `
+      <div style="border-left:4px solid ${color};background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;">
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:.92rem;margin-bottom:4px;">
+              <span style="color:${color};">${heure}</span>
+              ${dateAffichee}
+              · ${Utils.escapeHtml(i.type)}
+            </div>
+            <div style="font-size:.82rem;color:var(--text-light);">
+              👤 ${Utils.escapeHtml(i.demandeur)}<br>
+              ${benev}${benev2}
+            </div>
+          </div>
+          <span class="badge ${statutInfo.badge}" style="font-size:.65rem;flex-shrink:0;">${statutInfo.label}</span>
+        </div>
+        ${relance}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;">
+          <button class="btn btn-success" style="padding:6px 12px;font-size:.78rem;flex:1;" onclick="Missions.openFaitModal(${i.id})">✅ Fait</button>
+          <button class="btn" style="padding:6px 12px;font-size:.78rem;background:var(--accent);flex:1;" onclick="Missions.openReporterModal(${i.id})">📅 Reporter</button>
+          <button class="btn" style="padding:6px 12px;font-size:.78rem;background:#8b5cf6;flex:1;" onclick="Missions.openRelancerModal(${i.id})">🔔 Relancer</button>
+          <button class="btn" style="padding:6px 12px;font-size:.78rem;background:#f97316;flex:1;" onclick="Missions.openAssignerModal(${i.id})">👤 Assigner</button>
+          <button class="btn btn-ghost" style="padding:6px 10px;font-size:.85rem;" onclick="Interventions.openDetail(${i.id})" title="Voir la fiche">👁️</button>
+        </div>
+      </div>
+    `;
   },
 
   _renderCarte(i) {
@@ -3636,6 +3815,235 @@ const Missions = {
 
   // ---------- Vue ----------
 
+    // ---------- Actions Aujourd'hui ----------
+
+  openFaitModal(id) {
+    const i = this.getAll().find(x => String(x.id) === String(id));
+    if (!i) return;
+    document.getElementById('missionsFaitId').value = id;
+    document.getElementById('missionsFaitTitre').textContent = `${i.numero} · ${i.demandeur}`;
+    document.getElementById('missionsFaitDate').value = Utils.todayISO();
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    document.getElementById('missionsFaitHeure').value = `${hh}:${mm}`;
+    document.getElementById('missionsFaitNote').value = '';
+    document.getElementById('missionsFaitModal').classList.add('active');
+  },
+
+  closeFaitModal() { document.getElementById('missionsFaitModal').classList.remove('active'); },
+
+  confirmerFait(event) {
+    event.preventDefault();
+    const id = Number(document.getElementById('missionsFaitId').value);
+    const dateRealisee = document.getElementById('missionsFaitDate').value;
+    const heureRealisee = document.getElementById('missionsFaitHeure').value;
+    const note = document.getElementById('missionsFaitNote').value.trim();
+
+    const list = this.getAll();
+    const idx = list.findIndex(x => String(x.id) === String(id));
+    if (idx === -1) { alert('Intervention introuvable.'); return; }
+
+    list[idx].statut = 'terminee';
+    list[idx].dateRealisee = dateRealisee;
+    if (heureRealisee) list[idx].heureRealisee = heureRealisee;
+    if (note) {
+      list[idx].notes = (list[idx].notes || '') ? list[idx].notes + '\n' + note : note;
+    }
+
+    Interventions.saveAll(list);
+    this.closeFaitModal();
+    this.render();
+    if (typeof Agenda !== 'undefined' && Agenda.render) Agenda.render();
+    if (typeof Dashboard !== 'undefined' && Dashboard.render) Dashboard.render();
+    BricoBol.updateStorageInfo();
+  },
+
+  openReporterModal(id) {
+    const i = this.getAll().find(x => String(x.id) === String(id));
+    if (!i) return;
+    document.getElementById('missionsReportId').value = id;
+    document.getElementById('missionsReportTitre').textContent = `${i.numero} · ${i.demandeur}`;
+    document.getElementById('missionsReportDateActuelle').textContent = i.datePrevue ? Utils.formatDate(i.datePrevue) : '—';
+    const demain = new Date();
+    demain.setDate(demain.getDate() + 1);
+    document.getElementById('missionsReportDate').value = demain.toISOString().split('T')[0];
+    document.getElementById('missionsReportRaison').value = '';
+    document.getElementById('missionsReportModal').classList.add('active');
+  },
+
+  closeReporterModal() { document.getElementById('missionsReportModal').classList.remove('active'); },
+
+  reporterRapide(nbJours) {
+    const d = new Date();
+    d.setDate(d.getDate() + nbJours);
+    document.getElementById('missionsReportDate').value = d.toISOString().split('T')[0];
+  },
+
+  confirmerReporter(event) {
+    event.preventDefault();
+    const id = Number(document.getElementById('missionsReportId').value);
+    const nouvelleDate = document.getElementById('missionsReportDate').value;
+    const raison = document.getElementById('missionsReportRaison').value.trim();
+    if (!nouvelleDate) { alert('Choisissez une date.'); return; }
+
+    const list = this.getAll();
+    const idx = list.findIndex(x => String(x.id) === String(id));
+    if (idx === -1) { alert('Intervention introuvable.'); return; }
+
+    const ancienneDate = list[idx].datePrevue;
+    list[idx].datePrevue = nouvelleDate;
+
+    if (raison) {
+      const ligne = `[Report du ${Utils.formatDate(ancienneDate || '')} au ${Utils.formatDate(nouvelleDate)}] ${raison}`;
+      list[idx].notes = (list[idx].notes || '') ? list[idx].notes + '\n' + ligne : ligne;
+    }
+
+    Interventions.saveAll(list);
+    this.closeReporterModal();
+    this.render();
+    if (typeof Agenda !== 'undefined' && Agenda.render) Agenda.render();
+    BricoBol.updateStorageInfo();
+  },
+
+  openRelancerModal(id) {
+    const i = this.getAll().find(x => String(x.id) === String(id));
+    if (!i) return;
+    document.getElementById('missionsRelanceId').value = id;
+    document.getElementById('missionsRelanceTitre').textContent = `${i.numero} · ${i.demandeur}`;
+
+    const dejaRelance = !!i.aRelancer;
+    document.getElementById('missionsRelanceQuoi').value = dejaRelance ? (i.aRelancer.quoi || '') : '';
+    document.getElementById('missionsRelanceNote').value = dejaRelance ? (i.aRelancer.note || '') : '';
+
+    const radioImmediat = document.getElementById('missionsRelanceImmediat');
+    const radioDate = document.getElementById('missionsRelanceDateRadio');
+    const inputDate = document.getElementById('missionsRelanceDate');
+
+    if (dejaRelance && i.aRelancer.dateRelance) {
+      radioDate.checked = true;
+      radioImmediat.checked = false;
+      inputDate.value = i.aRelancer.dateRelance;
+      inputDate.disabled = false;
+    } else {
+      radioImmediat.checked = true;
+      radioDate.checked = false;
+      inputDate.value = Utils.todayISO();
+      inputDate.disabled = true;
+    }
+
+    const btnSuppr = document.getElementById('missionsRelanceSupprBtn');
+    if (btnSuppr) btnSuppr.style.display = dejaRelance ? 'block' : 'none';
+
+    document.getElementById('missionsRelanceModal').classList.add('active');
+  },
+
+  closeRelancerModal() { document.getElementById('missionsRelanceModal').classList.remove('active'); },
+
+  _toggleRelanceDate() {
+    const radioDate = document.getElementById('missionsRelanceDateRadio');
+    const inputDate = document.getElementById('missionsRelanceDate');
+    if (inputDate) inputDate.disabled = !radioDate.checked;
+  },
+
+  confirmerRelancer(event) {
+    event.preventDefault();
+    const id = Number(document.getElementById('missionsRelanceId').value);
+    const quoi = document.getElementById('missionsRelanceQuoi').value.trim();
+    const note = document.getElementById('missionsRelanceNote').value.trim();
+    const radioDate = document.getElementById('missionsRelanceDateRadio');
+    const inputDate = document.getElementById('missionsRelanceDate');
+
+    if (!quoi) { alert('Indiquez ce qu\'il faut relancer.'); return; }
+
+    let dateRelance = null;
+    if (radioDate.checked) {
+      dateRelance = inputDate.value;
+      if (!dateRelance) { alert('Choisissez une date ou cochez "Dès que possible".'); return; }
+    }
+
+    const list = this.getAll();
+    const idx = list.findIndex(x => String(x.id) === String(id));
+    if (idx === -1) { alert('Intervention introuvable.'); return; }
+
+    list[idx].aRelancer = { quoi, dateRelance, note, dateCreation: new Date().toISOString() };
+    list[idx].statut = 'relancer';
+
+    Interventions.saveAll(list);
+    this.closeRelancerModal();
+    this.render();
+    if (typeof Agenda !== 'undefined' && Agenda.render) Agenda.render();
+    if (typeof Dashboard !== 'undefined' && Dashboard.render) Dashboard.render();
+    BricoBol.updateStorageInfo();
+  },
+
+  retirerRelance() {
+    const id = Number(document.getElementById('missionsRelanceId').value);
+    if (!id) return;
+    if (!confirm('Retirer la relance ?')) return;
+
+    const list = this.getAll();
+    const idx = list.findIndex(x => String(x.id) === String(id));
+    if (idx === -1) { alert('Intervention introuvable.'); return; }
+
+    delete list[idx].aRelancer;
+    if (list[idx].statut === 'relancer') list[idx].statut = 'demande';
+
+    Interventions.saveAll(list);
+    this.closeRelancerModal();
+    this.render();
+    if (typeof Agenda !== 'undefined' && Agenda.render) Agenda.render();
+    if (typeof Dashboard !== 'undefined' && Dashboard.render) Dashboard.render();
+    BricoBol.updateStorageInfo();
+  },
+
+  openAssignerModal(id) {
+    const i = this.getAll().find(x => String(x.id) === String(id));
+    if (!i) return;
+    document.getElementById('missionsAssignId').value = id;
+    document.getElementById('missionsAssignTitre').textContent = `${i.numero} · ${i.demandeur}`;
+
+    const benevoles = Storage.getAdherents()
+      .filter(a => a.type === 'Bénévole' || (a.type === 'Adhérent bénéficiaire' && a.aussiBenevole))
+      .map(a => `${a.prenom} ${a.nom}`)
+      .sort();
+
+    const sel1 = document.getElementById('missionsAssignBenevole1');
+    const sel2 = document.getElementById('missionsAssignBenevole2');
+
+    sel1.innerHTML = '<option value="">— Aucun —</option>' + 
+      benevoles.map(b => `<option value="${Utils.escapeHtml(b)}" ${i.benevole === b ? 'selected' : ''}>${Utils.escapeHtml(b)}</option>`).join('');
+
+    sel2.innerHTML = '<option value="">— Aucun —</option>' + 
+      benevoles.map(b => `<option value="${Utils.escapeHtml(b)}" ${i.benevole2 === b ? 'selected' : ''}>${Utils.escapeHtml(b)}</option>`).join('');
+
+    document.getElementById('missionsAssignerModal').classList.add('active');
+  },
+
+  closeAssignerModal() { document.getElementById('missionsAssignerModal').classList.remove('active'); },
+
+  confirmerAssigner(event) {
+    event.preventDefault();
+    const id = Number(document.getElementById('missionsAssignId').value);
+    const b1 = document.getElementById('missionsAssignBenevole1').value.trim();
+    const b2 = document.getElementById('missionsAssignBenevole2').value.trim();
+
+    if (b1 && b2 && b1 === b2) { alert('Le bénévole principal et secondaire sont identiques.'); return; }
+
+    const list = this.getAll();
+    const idx = list.findIndex(x => String(x.id) === String(id));
+    if (idx === -1) { alert('Intervention introuvable.'); return; }
+
+    list[idx].benevole = b1 || '';
+    list[idx].benevole2 = b2 || '';
+
+    Interventions.saveAll(list);
+    this.closeAssignerModal();
+    this.render();
+    if (typeof Dashboard !== 'undefined' && Dashboard.render) Dashboard.render();
+    BricoBol.updateStorageInfo();
+  },
+
   getViewHTML() {
     return `
       <section class="view" id="view-missions">
@@ -3804,6 +4212,136 @@ const Missions = {
               <div style="display:flex;gap:10px;margin-top:16px;">
                 <button type="submit" class="btn" style="flex:1;background:#16a34a;">✔️ Valider et clôturer</button>
                 <button type="button" class="btn btn-ghost" onclick="Missions.fermerValiderModal()">Annuler</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modale FAIT -->
+      <div class="modal" id="missionsFaitModal">
+        <div class="modal-content" style="max-width:500px;">
+          <div class="modal-header">
+            <h2>✅ Marquer comme terminée</h2>
+            <button class="close-btn" onclick="Missions.closeFaitModal()">&times;</button>
+          </div>
+          <div class="modal-body">
+            <form onsubmit="Missions.confirmerFait(event)">
+              <input type="hidden" id="missionsFaitId">
+              <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:14px;margin-bottom:16px;">
+                <div style="font-size:.75rem;color:#166534;text-transform:uppercase;font-weight:700;">Intervention</div>
+                <div style="font-size:1.05rem;font-weight:800;margin-top:4px;" id="missionsFaitTitre">—</div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div class="form-group"><label>Date *</label><input type="date" id="missionsFaitDate" required></div>
+                <div class="form-group"><label>Heure</label><input type="time" id="missionsFaitHeure"></div>
+              </div>
+              <div class="form-group"><label>Note</label><textarea id="missionsFaitNote" rows="3"></textarea></div>
+              <div style="display:flex;gap:10px;">
+                <button type="submit" class="btn btn-success" style="flex:1;">✅ Marquer terminée</button>
+                <button type="button" class="btn btn-ghost" onclick="Missions.closeFaitModal()">Annuler</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modale REPORTER -->
+      <div class="modal" id="missionsReportModal">
+        <div class="modal-content" style="max-width:500px;">
+          <div class="modal-header">
+            <h2>📅 Reporter</h2>
+            <button class="close-btn" onclick="Missions.closeReporterModal()">&times;</button>
+          </div>
+          <div class="modal-body">
+            <form onsubmit="Missions.confirmerReporter(event)">
+              <input type="hidden" id="missionsReportId">
+              <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:14px;margin-bottom:16px;">
+                <div style="font-size:.75rem;color:#1e40af;text-transform:uppercase;font-weight:700;">Intervention</div>
+                <div style="font-size:1.05rem;font-weight:800;margin-top:4px;" id="missionsReportTitre">—</div>
+                <div style="font-size:.82rem;color:#64748b;margin-top:4px;">
+                  Date actuelle : <strong id="missionsReportDateActuelle">—</strong>
+                </div>
+              </div>
+              <div class="form-group"><label>Nouvelle date *</label><input type="date" id="missionsReportDate" required></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:14px;">
+                <button type="button" class="btn btn-ghost" style="font-size:.78rem;padding:8px;" onclick="Missions.reporterRapide(1)">Demain</button>
+                <button type="button" class="btn btn-ghost" style="font-size:.78rem;padding:8px;" onclick="Missions.reporterRapide(3)">+3 j</button>
+                <button type="button" class="btn btn-ghost" style="font-size:.78rem;padding:8px;" onclick="Missions.reporterRapide(7)">+1 sem</button>
+              </div>
+              <div class="form-group"><label>Raison</label><textarea id="missionsReportRaison" rows="2"></textarea></div>
+              <div style="display:flex;gap:10px;">
+                <button type="submit" class="btn" style="flex:1;background:var(--accent);">📅 Reporter</button>
+                <button type="button" class="btn btn-ghost" onclick="Missions.closeReporterModal()">Annuler</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modale RELANCER -->
+      <div class="modal" id="missionsRelanceModal">
+        <div class="modal-content" style="max-width:520px;">
+          <div class="modal-header">
+            <h2>🔔 Relancer</h2>
+            <button class="close-btn" onclick="Missions.closeRelancerModal()">&times;</button>
+          </div>
+          <div class="modal-body">
+            <form onsubmit="Missions.confirmerRelancer(event)">
+              <input type="hidden" id="missionsRelanceId">
+              <div style="background:#faf5ff;border:1px solid #c4b5fd;border-radius:10px;padding:14px;margin-bottom:16px;">
+                <div style="font-size:.75rem;color:#7c3aed;text-transform:uppercase;font-weight:700;">Intervention</div>
+                <div style="font-size:1.05rem;font-weight:800;margin-top:4px;" id="missionsRelanceTitre">—</div>
+              </div>
+              <div class="form-group"><label>Quoi ? *</label><input type="text" id="missionsRelanceQuoi" required></div>
+              <div class="form-group">
+                <label>Quand ?</label>
+                <label style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--bg-alt);border-radius:8px;cursor:pointer;margin-bottom:6px;">
+                  <input type="radio" name="missionsRelanceQuand" id="missionsRelanceImmediat" checked onchange="Missions._toggleRelanceDate()" style="width:auto;">
+                  <span>Dès que possible</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--bg-alt);border-radius:8px;cursor:pointer;margin-bottom:6px;">
+                  <input type="radio" name="missionsRelanceQuand" id="missionsRelanceDateRadio" onchange="Missions._toggleRelanceDate()" style="width:auto;">
+                  <span>Le</span>
+                  <input type="date" id="missionsRelanceDate" disabled style="flex:1;padding:6px 10px;border:1px solid var(--border);border-radius:6px;">
+                </label>
+              </div>
+              <div class="form-group"><label>Note</label><textarea id="missionsRelanceNote" rows="2"></textarea></div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button type="submit" class="btn" style="flex:1;background:#8b5cf6;">🔔 Marquer</button>
+                <button type="button" class="btn btn-ghost" onclick="Missions.closeRelancerModal()">Annuler</button>
+              </div>
+              <button type="button" id="missionsRelanceSupprBtn" class="btn btn-danger" style="width:100%;margin-top:10px;display:none;" onclick="Missions.retirerRelance()">🗑️ Retirer la relance</button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modale ASSIGNER -->
+      <div class="modal" id="missionsAssignerModal">
+        <div class="modal-content" style="max-width:520px;">
+          <div class="modal-header">
+            <h2>👤 Assigner les bénévoles</h2>
+            <button class="close-btn" onclick="Missions.closeAssignerModal()">&times;</button>
+          </div>
+          <div class="modal-body">
+            <form onsubmit="Missions.confirmerAssigner(event)">
+              <input type="hidden" id="missionsAssignId">
+              <div style="background:#fff7ed;border:1px solid #fdba74;border-radius:10px;padding:14px;margin-bottom:16px;">
+                <div style="font-size:.75rem;color:#9a3412;text-transform:uppercase;font-weight:700;">Intervention</div>
+                <div style="font-size:1.05rem;font-weight:800;margin-top:4px;" id="missionsAssignTitre">—</div>
+              </div>
+              <div class="form-group">
+                <label>🤝 Bénévole principal</label>
+                <select id="missionsAssignBenevole1" style="padding:10px;border:1px solid var(--border);border-radius:8px;font-size:.9rem;width:100%;"></select>
+              </div>
+              <div class="form-group">
+                <label>🤝 Bénévole secondaire</label>
+                <select id="missionsAssignBenevole2" style="padding:10px;border:1px solid var(--border);border-radius:8px;font-size:.9rem;width:100%;"></select>
+              </div>
+              <div style="display:flex;gap:10px;">
+                <button type="submit" class="btn" style="flex:1;background:#f97316;">💾 Enregistrer</button>
+                <button type="button" class="btn btn-ghost" onclick="Missions.closeAssignerModal()">Annuler</button>
               </div>
             </form>
           </div>
@@ -6625,7 +7163,7 @@ const Interventions = {
     const prio = i.priorite === 'urgente' ? '<span class="badge badge-danger">Urgent</span>' : '';
     const autres = this.getAll().filter(x => x.id !== i.id && x.demandeur.toLowerCase() === i.demandeur.toLowerCase());
        this._interventionCourante = i;
-       
+
     const histo = autres.length > 0
       ? `<div class="adh-detail-section"><h4>Historique du demandeur (${autres.length})</h4>${autres.slice(0, 3).map(a => `<p>${Utils.escapeHtml(a.numero)} · ${Utils.formatDate(a.dateCreation)} · ${a.type} · <span class="badge ${this.STATUTS[a.statut].badge}">${this.STATUTS[a.statut].label}</span></p>`).join('')}</div>`
       : '';
@@ -6873,7 +7411,7 @@ const Interventions = {
           <div><h1>Interventions</h1><p>Carnet de mission</p></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button class="btn btn-ghost" onclick="Interventions.exportCSV()">📥 Export CSV</button>
-            <button class="btn" onclick="Interventions.openForm()">➕ Nouvelle intervention</button>
+            <button class="btn" onclick="Missions.nouvelleIntervention()">➕ Nouvelle intervention</button>
           </div>
         </div>
         <div class="stats-grid">
