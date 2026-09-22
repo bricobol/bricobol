@@ -4782,7 +4782,7 @@ console.log('🔥 SAVE — prenom lu =', document.getElementById('adhPrenom').va
   // ✉️ ENVOI DE MESSAGES
   // ============================================================
 
-  ouvrirMessageModal(adherentId) {
+  ouvrirMessageModal(adherentId, contexte) {
     if (typeof Router !== 'undefined' && Router.mountIfNeeded && Router.registry['adherents']) {
       Router.mountIfNeeded('adherents', Router.registry['adherents']);
     }
@@ -4810,6 +4810,7 @@ console.log('🔥 SAVE — prenom lu =', document.getElementById('adhPrenom').va
     else canalSel.value = 'email';
 
     this._messageAdhCourant = adh;
+    this._messageContexte = contexte || null;
     this._majMessagePreview();
     document.getElementById('messageModal').classList.add('active');
   },
@@ -4819,16 +4820,19 @@ console.log('🔥 SAVE — prenom lu =', document.getElementById('adhPrenom').va
     this._messageAdhCourant = null;
   },
 
-  _appliquerVariables(texte, adh) {
+  _appliquerVariables(texte, adh, ctx) {
     if (!texte) return '';
     const p = Parametres.getParam();
+    const c = ctx || {};
     const map = {
       '{prenom}': adh.prenom || '',
       '{nom}': adh.nom || '',
-      '{date}': '',
-      '{heure}': '',
+      '{date}': c.datePrevue ? Utils.formatDate(c.datePrevue) : '',
+      '{heure}': c.heurePrevue || '',
       '{asso}': p.nomAssociation || 'BricoBol',
-      '{site}': p.lienSiteMessage || 'https://sites.google.com/view/bricobol'
+      '{site}': p.lienSiteMessage || 'https://sites.google.com/view/bricobol',
+      '{intervention}': c.intervention || '',
+      '{type}': c.type || ''
     };
     let out = texte;
     Object.keys(map).forEach(k => {
@@ -4854,13 +4858,13 @@ console.log('🔥 SAVE — prenom lu =', document.getElementById('adhPrenom').va
     // Corps
     const signature = p.signatureMessage || "L'équipe BricoBol – aide solidaire";
     const lienSite = p.lienSiteMessage || 'https://sites.google.com/view/bricobol';
-    const corpsModele = this._appliquerVariables(modele ? modele.corps : '', adh);
+    const corpsModele = this._appliquerVariables(modele ? modele.corps : '', adh, this._messageContexte);
     const signatureComplete = '\n\n' + signature + '\n' + lienSite;
     document.getElementById('messageCorps').value = corpsModele + signatureComplete;
 
     // Objet
     if (modele && modele.sujet) {
-      document.getElementById('messageObjet').value = this._appliquerVariables(modele.sujet, adh);
+      document.getElementById('messageObjet').value = this._appliquerVariables(modele.sujet, adh, this._messageContexte);
     } else {
       document.getElementById('messageObjet').value = '';
     }
@@ -6620,6 +6624,8 @@ const Interventions = {
     const st = this.STATUTS[i.statut] || this.STATUTS.demande;
     const prio = i.priorite === 'urgente' ? '<span class="badge badge-danger">Urgent</span>' : '';
     const autres = this.getAll().filter(x => x.id !== i.id && x.demandeur.toLowerCase() === i.demandeur.toLowerCase());
+       this._interventionCourante = i;
+       
     const histo = autres.length > 0
       ? `<div class="adh-detail-section"><h4>Historique du demandeur (${autres.length})</h4>${autres.slice(0, 3).map(a => `<p>${Utils.escapeHtml(a.numero)} · ${Utils.formatDate(a.dateCreation)} · ${a.type} · <span class="badge ${this.STATUTS[a.statut].badge}">${this.STATUTS[a.statut].label}</span></p>`).join('')}</div>`
       : '';
@@ -6698,11 +6704,11 @@ const Interventions = {
       ${fraisHTML}
       ${donsHTML}
       <div class="adh-detail-section"><h4>Service</h4><p><strong>${Utils.escapeHtml(i.type)}</strong></p></div>
-      <div class="adh-detail-section"><h4>Demandeur</h4><p>👤 ${Utils.escapeHtml(i.demandeur)} <button class="btn" style="padding:2px 8px;font-size:.75rem;background:var(--info);margin-left:6px;" onclick="Interventions.messageContact('${Utils.escapeHtml(i.demandeur)}')" title="Envoyer un message">✉️</button></p></div>
+      <div class="adh-detail-section"><h4>Demandeur</h4><p>👤 ${Utils.escapeHtml(i.demandeur)} <button class="btn" style="padding:2px 8px;font-size:.75rem;background:var(--info);margin-left:6px;" onclick="Interventions.messageContact('${Utils.escapeHtml(i.demandeur)}', Interventions._interventionCourante)" title="Envoyer un message">✉️</button></p></div>
       <div class="adh-detail-section"><h4>Description</h4><p style="white-space:pre-wrap;">${Utils.escapeHtml(i.description)}</p></div>
       <div class="adh-detail-section">
         <h4>Assignation</h4>
-        <p>Bénévole : ${i.benevole ? Utils.escapeHtml(i.benevole) : '<em>Non assigné</em>'}${i.benevole ? ` <button class="btn" style="padding:2px 8px;font-size:.75rem;background:var(--info);margin-left:6px;" onclick="Interventions.messageContact('${Utils.escapeHtml(i.benevole)}')" title="Envoyer un message">✉️</button>` : ''}</p>
+        <p>Bénévole : ${i.benevole ? Utils.escapeHtml(i.benevole) : '<em>Non assigné</em>'}${i.benevole ? ` <button class="btn" style="padding:2px 8px;font-size:.75rem;background:var(--info);margin-left:6px;" onclick="Interventions.messageContact('${Utils.escapeHtml(i.benevole)}', Interventions._interventionCourante)" title="Envoyer un message">✉️</button>` : ''}</p>
         ${datePrevueAffiche ? `<p>${datePrevueAffiche}</p>` : ''}
         ${dateRealiseeAffiche ? `<p>${dateRealiseeAffiche}</p>` : ''}
       </div>
@@ -6784,8 +6790,20 @@ const Interventions = {
     this.closeDetail();
     Dons.openForm(null, { adherentId: i.adherentId, interventionNumero: i.numero });
   },
-  messageContact(nom) {
+  messageContact(nom, intervention) {
     if (!nom) { alert('Aucun nom à rechercher.'); return; }
+    let ctx = null;
+    if (intervention) {
+      const num = intervention.numero || '';
+      const dem = intervention.demandeur || '';
+      const typ = intervention.type || '';
+      ctx = {
+        datePrevue: intervention.datePrevue || '',
+        heurePrevue: intervention.heurePrevue || '',
+        intervention: num + (dem ? ' · ' + dem : '') + (typ ? ' · ' + typ : ''),
+        type: typ
+      };
+    }
     if (typeof Adherents === 'undefined' || !Adherents.ouvrirMessageModal) {
       alert('Module Annuaire indisponible.');
       return;
@@ -6805,7 +6823,7 @@ const Interventions = {
       return;
     }
         this.closeDetail();
-    Adherents.ouvrirMessageModal(contact.id);
+    Adherents.ouvrirMessageModal(contact.id, ctx);
   },
 
   closeDetail() { document.getElementById('interventionDetailModal').classList.remove('active'); },
