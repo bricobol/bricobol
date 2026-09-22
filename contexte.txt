@@ -1,6 +1,6 @@
 ================================================================
 CONTEXTE PROJET BRICOBOL
-Dernière mise à jour : 21/09/2026 (hash URL + shortcuts manifest)
+Dernière mise à jour : 22/09/2026 (fin Fusion Sessions 1-3)
 ================================================================
 ⚠️ FICHIER AUTONOME — tout est là pour reprendre sur un
    nouveau chat, une nouvelle IA, ou après une longue pause.
@@ -21,7 +21,7 @@ Application de gestion pour l'association BricoBol.
 - 1 bureau, plusieurs bénévoles
 - 2-4 appareils synchronisés
 - Utilisation quotidienne
-- Développement se fait sur PC (VS Code) — mobile (Acode) possible en secours
+- Développement sur PC (VS Code) — mobile (Acode) en secours
 
 ## ⚠️ STRUCTURE RÉELLE DU PROJET
 
@@ -31,7 +31,7 @@ INLINE dans index.html. Il n'y a PAS de dossier js/ ni css/.
 Fichiers du dépôt :
 ├── index.html                 ← TOUT le code (CSS + 18 modules JS inline)
 ├── manifest.json              ← PWA + 4 raccourcis (shortcuts)
-├── sw.js                      ← Service Worker (cache v10)
+├── sw.js                      ← Service Worker (cache v14)
 ├── icon.svg
 ├── android-chrome-192x192.png
 ├── android-chrome-512x512.png
@@ -90,13 +90,12 @@ Supabase :
 ## VERSION UNIFIÉE
 
 Toute l'app affiche **v0.5**.
-sw.js cache : **bricobol-v10**
+sw.js cache : **bricobol-v14**
 
 ⚠️ RÈGLE RÉVISÉE : incrémenter le cache sw.js uniquement
 lors des **déploiements réels** vers les bénévoles, pas à
-chaque commit intermédiaire. Pendant le développement, on
-peut pousser sans incrémenter.
-En cas de doute : incrémenter est plus sûr.
+chaque commit intermédiaire. En cas de doute : incrémenter
+est plus sûr.
 
 ## COLONNES SUPABASE AJOUTÉES MANUELLEMENT
 
@@ -139,8 +138,8 @@ Préfixe : bricobol_
 4.  SupaClient     — client Supabase + CRUD + détection pause
 5.  BricoBol       — app shell (sidebar, GPS, recharger)
 6.  Dashboard      — stats + bandeaux + cartes cliquables
-7.  Tournee        — vue "Aujourd'hui" + calcul frais manuel
-8.  Missions       — workflow + onglet "Aujourd'hui" (coquille)
+7.  Tournee        — EN DORMANCE (retiré du menu, code conservé)
+8.  Missions       — workflow + onglet "Aujourd'hui" COMPLET
 9.  Adherents      — annuaire unifié + import Yapla + Messages
 10. Formulaire     — recrutement (papier + HTML + JSON)
 11. Interventions  — carnet + cartes cliquables + Message
@@ -156,7 +155,7 @@ Préfixe : bricobol_
 
 Section "Vue d'ensemble" :
 - 🏠 Dashboard       (ordre 1)
-- 📅 Tournee         (ordre 2)   ← à fusionner dans Missions
+- 📅 Tournee         → DORMANCE (n'apparaît plus dans le menu)
 
 Section "Activité" :
 - 📋 Missions, 👥 Adherents, 🛠️ Interventions, 📅 Agenda,
@@ -186,25 +185,24 @@ Recettes compta : REC-XXX
 Dépenses compta : DEP-XXX
 Achats (à venir) : ACH-XXX
 
-## 🔗 HASH D'URL — NOUVEAU
+## 🔗 HASH D'URL — EN PLACE
 
-Le Router supporte maintenant le hash d'URL.
+Le Router supporte le hash d'URL.
 
 - `bricobol.github.io/bricobol/#agenda` → ouvre l'agenda direct
 - `bricobol.github.io/bricobol/#missions` → ouvre les missions
 - etc. pour tous les modules
 - Priorité au démarrage : hash > localStorage > dashboard
 - Le hash est mis à jour à chaque changement de vue
-  (history.replaceState, pas de rechargement)
 - Le bouton retour navigateur fonctionne (hashchange)
 
-**Fonctions ajoutées dans Router :**
+**Fonctions dans Router :**
 - `_getViewFromHash()` — lit et valide le hash
 - `init()` — prend le hash en priorité au démarrage
-- `go()` — met à jour le hash
+- `go()` — met à jour le hash (history.replaceState)
 - Listener `hashchange`
 
-**Raccourcis manifest.json ajoutés :**
+**Raccourcis manifest.json (4) :**
 - Agenda     → /bricobol/#agenda
 - Missions   → /bricobol/#missions
 - Frais      → /bricobol/#frais

@@ -1707,9 +1707,9 @@ const Dashboard = {
         alertes.push({
           icon: '⚠️',
           texte: `${enRetard.length} intervention${enRetard.length > 1 ? 's' : ''} en retard à traiter`,
-          action: 'Voir la tournée',
-          view: 'tournee',
-          params: null,
+          action: 'Voir les retards',
+          view: 'missions',
+          params: { tab: 'aujourdhui' },
           couleur: '#dc2626',
           bg: '#fef2f2',
           border: '#fecaca'
@@ -1725,9 +1725,9 @@ const Dashboard = {
         alertes.push({
           icon: '📅',
           texte: `${jour.length} intervention${jour.length > 1 ? 's' : ''} prévue${jour.length > 1 ? 's' : ''} aujourd'hui · ${nbB} bénévole${nbB > 1 ? 's' : ''}`,
-          action: 'Voir la tournée',
-          view: 'tournee',
-          params: null,
+          action: 'Voir les interventions',
+          view: 'missions',
+          params: { tab: 'aujourdhui' },
           couleur: '#2563eb',
           bg: '#eff6ff',
           border: '#bfdbfe'
@@ -1861,7 +1861,7 @@ const Dashboard = {
         <div id="dashAlertes"></div>
 
         <div class="stats-grid">
-          <div class="stat-card" style="cursor:pointer;border-left:4px solid #2563eb;" onclick="Router.go('tournee')" title="Voir la tournée du jour">
+          <div class="stat-card" style="cursor:pointer;border-left:4px solid #2563eb;" onclick="Router.go('missions', { tab: 'aujourdhui' })" title="Voir les interventions du jour">
             <div class="stat-label">📅 Aujourd'hui</div>
             <div class="stat-value" id="dashTournee">—</div>
             <div class="stat-sub" id="dashTourneeSub">Interventions prévues →</div>
@@ -3048,16 +3048,18 @@ const Tournee = {
   onShow() { this.render(); }
 };
 
-Router.register({
-  view: 'tournee',
-  title: "Aujourd'hui",
-  icon: '📅',
-  section: "Vue d'ensemble",
-  order: 2,
-  getViewHTML: () => Tournee.getViewHTML(),
-  getModalsHTML: () => Tournee.getModalsHTML(),
-  onShow: () => Tournee.onShow()
-});
+// ⚠️ Tournee en dormance — fusionné dans Missions > onglet Aujourd'hui
+// Le code reste pour référence (calcul frais manuel à migrer)
+// Router.register({
+//   view: 'tournee',
+//   title: "Aujourd'hui",
+//   icon: '📅',
+//   section: "Vue d'ensemble",
+//   order: 2,
+//   getViewHTML: () => Tournee.getViewHTML(),
+//   getModalsHTML: () => Tournee.getModalsHTML(),
+//   onShow: () => Tournee.onShow()
+// });
 </script>
 <script>
 // ============================================================
@@ -3110,7 +3112,13 @@ const Missions = {
   _compterParTab() {
     const all = this.getAll();
     return {
-      aujourdhui: 0,
+      aujourdhui: (() => {
+        const ids = new Set();
+        this.getJour().forEach(i => ids.add(i.id));
+        this.getEnRetard().forEach(i => ids.add(i.id));
+        this.getARelancer().forEach(i => ids.add(i.id));
+        return ids.size;
+      })(),
       toutes: all.filter(i => this._statutsToutes().includes(i.statut)).length,
       a_prendre: all.filter(i => i.statut === 'demande').length,
       en_cours: all.filter(i => i.statut === 'prise' || i.statut === 'en_cours' || i.statut === 'planifiee').length,
@@ -4349,7 +4357,10 @@ const Missions = {
       </div>`;
   },
 
-  onShow() { this.render(); }
+  onShow(params) {
+    if (params && params.tab) this.currentTab = params.tab;
+    this.render();
+  }
 };
 
 Router.register({
