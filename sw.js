@@ -1,10 +1,34 @@
-    // ============================================================
+// ============================================================
 // SERVICE WORKER — BricoBol
 // Cache l'app pour hors-ligne + mises à jour auto
 // ============================================================
 
-const CACHE = 'bricobol-v16';
-const ASSETS = ['/', '/bricobol/', '/bricobol/index.html', '/bricobol/manifest.json', '/bricobol/icon.svg'];
+const CACHE = 'bricobol-v15';
+const ASSETS = [
+  '/', '/bricobol/',
+  '/bricobol/index.html',
+  '/bricobol/manifest.json',
+  '/bricobol/icon.svg',
+  '/bricobol/css/style.css',
+  '/bricobol/js/storage.js',
+  '/bricobol/js/utils.js',
+  '/bricobol/js/router.js',
+  '/bricobol/js/supabase-client.js',
+  '/bricobol/js/app.js',
+  '/bricobol/js/module-dashboard.js',
+  '/bricobol/js/module-tournee.js',
+  '/bricobol/js/module-missions.js',
+  '/bricobol/js/module-adherents.js',
+  '/bricobol/js/module-formulaire.js',
+  '/bricobol/js/module-interventions.js',
+  '/bricobol/js/module-agenda.js',
+  '/bricobol/js/module-frais.js',
+  '/bricobol/js/module-cotisations.js',
+  '/bricobol/js/module-dons.js',
+  '/bricobol/js/module-comptabilite.js',
+  '/bricobol/js/module-documents.js',
+  '/bricobol/js/module-parametres.js'
+];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
