@@ -41,6 +41,7 @@ const Storage = {
       updated_at: 'updatedAt'
     },
     interventions: {
+      benevoles: 'benevoles',
       date_creation: 'dateCreation',
       date_prevue: 'datePrevue',
       heure_prevue: 'heurePrevue',
@@ -131,6 +132,13 @@ const Storage = {
         delete out[sqlKey];
       }
     }
+    // ✅ Garantir que benevoles est toujours un array (jamais null)
+    if (table === 'interventions') {
+      if (!Array.isArray(out.benevoles)) {
+        out.benevoles = [];
+      }
+    }
+
     const idFields = ['id', 'adherentId', 'comptaId', 'donId', 'versementId', 'interventionId'];
     idFields.forEach(f => {
       if (out[f] !== undefined && out[f] !== null && typeof out[f] === 'string') {
@@ -243,6 +251,30 @@ const Storage = {
   getEntries() { return this.get('entries', []); },
   saveEntries(list) { this.set('entries', list); },
   getInterventions() { return this.get('interventions', []); },
+  // ✅ Helpers bénévoles (compatibilité benevole/benevole2 ↔ benevoles)
+  getBenevoles(intervention) {
+    if (!intervention) return [];
+    if (Array.isArray(intervention.benevoles) && intervention.benevoles.length > 0) {
+      return intervention.benevoles.filter(b => b && String(b).trim());
+    }
+    // Fallback : reconstruire depuis benevole + benevole2
+    const liste = [];
+    if (intervention.benevole) liste.push(intervention.benevole);
+    if (intervention.benevole2) liste.push(intervention.benevole2);
+    return liste;
+  },
+
+  setBenevoles(intervention, liste) {
+    if (!intervention) return;
+    const propre = (Array.isArray(liste) ? liste : [])
+      .filter(b => b && String(b).trim())
+      .map(b => String(b).trim());
+    intervention.benevoles = propre;
+    // Synchroniser benevole/benevole2 pour les modules pas encore migrés
+    intervention.benevole = propre[0] || '';
+    intervention.benevole2 = propre[1] || '';
+  },
+
   saveInterventions(list) { this.set('interventions', list); },
   getDeplacements() { return this.get('deplacements', []); },
   saveDeplacements(list) { this.set('deplacements', list); },
