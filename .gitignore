@@ -2,3 +2,9 @@ index.html.backup*
 *.new
 fix*.sh
 fix*.awk
+
+# Backups monolithe
+index-monolithe-*.html
+
+# Build (regenerable)
+bricobol-mobile.html
