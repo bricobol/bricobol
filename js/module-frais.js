@@ -558,13 +558,31 @@ const Frais = {
 
     let repartitionHTML = '';
     const inter = f.interventions || [];
-    if (inter.length > 0 && typeof inter[0] === 'object' && inter[0].part !== undefined) {
+    if (inter.length === 1 && typeof inter[0] === 'object' && inter[0].part !== undefined) {
+      // === Cas 1 seule intervention : affichage simple ===
+      const r = inter[0];
+      repartitionHTML = `
+        <div class="adh-detail-section" style="background:#eff6ff;border:1px solid #bfdbfe;">
+          <h4 style="color:#1e40af;">🚗 Trajet</h4>
+          <div style="padding:3px 0;font-size:.88rem;">Domicile → ${Utils.escapeHtml(r.numero)}${r.nom ? ' · ' + Utils.escapeHtml(r.nom) : ''} → Domicile</div>
+          ${r.type ? `<div style="font-size:.78rem;color:var(--text-light);margin-top:2px;">${Utils.escapeHtml(r.type)}</div>` : ''}
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid #bfdbfe;margin-top:6px;font-size:.88rem;">
+            <span>📍 ${f.km} km × ${(f.bareme || 0.40).toFixed(2)} €</span>
+            <strong style="color:#1e40af;">${(f.montant || 0).toFixed(2)} €</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:10px 0 0;border-top:2px solid #1e40af;margin-top:6px;">
+            <span style="color:#166534;font-weight:800;">💵 À REMBOURSER AU BÉNÉVOLE</span>
+            <strong style="color:#166534;font-size:1.15rem;">${(f.montant || 0).toFixed(2)} €</strong>
+          </div>
+        </div>`;
+    } else if (inter.length > 1 && typeof inter[0] === 'object' && inter[0].part !== undefined) {
+      // === Cas tournée groupée : prorata complet ===
       const totalKmInd = inter.reduce((s, r) => s + (r.kmIndividuel || 0), 0);
       const totalVirtuel = totalKmInd * (f.bareme || 0.40);
       const economie = totalVirtuel - (f.montant || 0);
       repartitionHTML = `
         <div class="adh-detail-section">
-          <h4>Répartition au prorata (${inter.length} intervention${inter.length > 1 ? 's' : ''})</h4>
+          <h4>Répartition au prorata (${inter.length} interventions)</h4>
           <table style="width:100%;font-size:.85rem;border-collapse:collapse;margin-top:6px;">
             <thead>
               <tr style="border-bottom:1px solid var(--border);">
@@ -599,6 +617,10 @@ const Frais = {
           <div style="margin-top:10px;font-size:.8rem;color:var(--text-light);">
             💡 Sans tournée groupée, coût virtuel = <strong>${totalVirtuel.toFixed(2)} €</strong><br>
             💰 Économie réalisée = <strong style="color:var(--success);">${economie.toFixed(2)} €</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:10px 0 0;border-top:2px solid var(--success);margin-top:8px;">
+            <span style="color:#166534;font-weight:800;">💵 À REMBOURSER AU BÉNÉVOLE</span>
+            <strong style="color:#166534;font-size:1.15rem;">${(f.montant || 0).toFixed(2)} €</strong>
           </div>
         </div>`;
     } else if (inter.length > 0) {

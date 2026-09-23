@@ -184,6 +184,11 @@ const Missions = {
     if (typeof Interventions !== 'undefined') Interventions.openForm();
   },
 
+  ouvrirDetail(id) {
+    BricoBol.ensureModuleMounted('interventions');
+    if (typeof Interventions !== 'undefined') Interventions.openDetail(id);
+  },
+
   ouvrirCalculFrais(idOptionnel) {
     if (typeof Tournee === 'undefined') { alert('Module Tournée indisponible.'); return; }
     if (!document.getElementById('tourneeFraisModal') && Tournee.getModalsHTML) {
@@ -293,7 +298,7 @@ const Missions = {
           <button class="btn" style="padding:6px 12px;font-size:.78rem;background:#8b5cf6;flex:1;" onclick="Missions.openRelancerModal(${i.id})">🔔 Relancer</button>
           <button class="btn" style="padding:6px 12px;font-size:.78rem;background:#f97316;flex:1;" onclick="Missions.openAssignerModal(${i.id})">👤 Assigner</button>
           <button class="btn" style="padding:6px 10px;font-size:.78rem;background:#0ea5e9;" onclick="Missions.ouvrirCalculFrais(${i.id})" title="Calculer les frais">🚗</button>
-          <button class="btn btn-ghost" style="padding:6px 10px;font-size:.85rem;" onclick="Interventions.openDetail(${i.id})" title="Voir la fiche">👁️</button>
+          <button class="btn btn-ghost" style="padding:6px 10px;font-size:.85rem;" onclick="Missions.ouvrirDetail(${i.id})" title="Voir la fiche">👁️</button>
         </div>
       </div>
     `;

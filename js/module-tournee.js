@@ -23,8 +23,9 @@ const Tournee = {
   // ---------- État du calcul de frais ----------
   _fraisEtat: {
     benevole: '',
-    interventions: [],  // array d'ids dans l'ordre
-    transitions: []     // array de { type: 'direct'|'domicile'|'autre', adresse: '' }
+    interventions: [],
+    transitions: [],
+    dernierCalcul: null
   },
 
   // ---------- Récupération ----------
@@ -237,6 +238,69 @@ const Tournee = {
 
   fermerCalculFrais() {
     document.getElementById('tourneeFraisModal').classList.remove('active');
+  },
+  
+  _ajusterKmManuel(newKmStr) {
+    const ctx = this._fraisEtat.dernierCalcul;
+    if (!ctx) { alert('Aucun calcul en cours.'); return; }
+
+    const newKm = parseFloat(newKmStr);
+    if (isNaN(newKm) || newKm <= 0) { alert('Km invalide.'); return; }
+
+    const bareme = ctx.bareme;
+    const nouveauMontant = newKm * bareme;
+    const totalVirtuel = ctx.totalKmInd * bareme;
+    const economie = totalVirtuel - nouveauMontant;
+    const pctEco = totalVirtuel > 0 ? ((economie / totalVirtuel) * 100).toFixed(0) : 0;
+
+    // Recalcul proportionnel : on garde les % du calcul auto
+    const nouvellesParts = ctx.interventionsArr.map(r => {
+      const ratio = ctx.totalKmInd > 0 ? (r.kmIndividuel / ctx.totalKmInd) : (1 / ctx.interventionsArr.length);
+      return ratio * nouveauMontant;
+    });
+    const sommeParts = nouvellesParts.reduce((s, p) => s + p, 0);
+
+    // Mettre à jour le déplacement sauvegardé
+    const deps = Storage.getDeplacements();
+    const idx = deps.findIndex(d => String(d.id) === String(ctx.deplacementId));
+    if (idx !== -1) {
+      deps[idx].km = newKm;
+      deps[idx].montant = nouveauMontant;
+      deps[idx].interventions = ctx.interventionsArr.map((r, i) => ({
+        numero: r.numero,
+        nom: r.nom,
+        type: r.type,
+        kmIndividuel: r.kmIndividuel,
+        part: nouvellesParts[i]
+      }));
+      Storage.saveDeplacements(deps);
+    }
+
+    // Mettre à jour l'affichage (DOM)
+    const elResume = document.getElementById('tourneeFraisResume');
+    if (elResume) elResume.textContent = `${newKm} km · ${nouveauMontant.toFixed(2)} €`;
+
+    document.querySelectorAll('.tourneeFraisPart').forEach(el => {
+      const i = parseInt(el.dataset.idx);
+      if (!isNaN(i) && nouvellesParts[i] !== undefined) {
+        el.textContent = nouvellesParts[i].toFixed(2) + ' €';
+      }
+    });
+
+    const elSomme = document.getElementById('tourneeFraisSommeParts');
+    if (elSomme) elSomme.textContent = sommeParts.toFixed(2) + ' €';
+
+    const elMontant = document.getElementById('tourneeFraisMontantReel');
+    if (elMontant) elMontant.textContent = nouveauMontant.toFixed(2) + ' €';
+
+    const elEco = document.getElementById('tourneeFraisEconomie');
+    if (elEco) elEco.textContent = `${economie.toFixed(2)} € (${pctEco} %)`;
+
+    const elRemb = document.getElementById('tourneeFraisARembourser');
+    if (elRemb) elRemb.textContent = nouveauMontant.toFixed(2) + ' €';
+
+    // Rafraîchir la liste Frais (le déplacement a changé)
+    if (typeof Frais !== 'undefined' && Frais.render) Frais.render();
   },
 
   _rendreModaleCalcul() {
@@ -630,6 +694,13 @@ const Tournee = {
       };
       depsFinal.push(deplacement);
       Storage.saveDeplacements(depsFinal);
+            this._fraisEtat.dernierCalcul = {
+        interventionsArr: interventionsArr.map(r => ({ ...r })),
+        totalKmInd: totalKmInd,
+        bareme: bareme,
+        deplacementId: deplacement.id,
+        numero: numero
+      };
 
       // k) Mettre à jour les interventions (assignation bénévole)
       const interList = Interventions.getAll();
@@ -656,13 +727,63 @@ const Tournee = {
       const pctEco = totalVirtuel > 0 ? ((economie / totalVirtuel) * 100).toFixed(0) : 0;
       const sommeParts = interventionsArr.reduce((s, r) => s + r.part, 0);
 
-      let msg = `
+      let msg;
+      if (interventionsArr.length === 1) {
+        // ===================== CAS 1 SEULE INTERVENTION =====================
+        msg = `
         <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:14px;font-size:.88rem;margin-top:10px;">
           <div style="font-weight:800;color:#166534;margin-bottom:8px;">✅ Déplacement créé : ${numero}</div>
 
           <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed #86efac;">
             <span>${Utils.escapeHtml(nomAffichage)}</span>
-            <strong>${kmTotal} km · ${montant.toFixed(2)} €</strong>
+            <strong id="tourneeFraisResume">${kmTotal} km · ${montant.toFixed(2)} €</strong>
+          </div>
+
+          <div style="margin-top:10px;padding:10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:.85rem;">
+            <label style="display:block;font-weight:700;color:#1e40af;margin-bottom:6px;">🚗 Km réels (relevé compteur)</label>
+            <input type="number" step="1" min="1" value="${kmTotal}" onchange="Tournee._ajusterKmManuel(this.value)" style="width:100%;padding:8px;border:1px solid #bfdbfe;border-radius:6px;font-size:1rem;font-weight:700;text-align:center;color:#1e40af;">
+            <div style="font-size:.72rem;color:#64748b;margin-top:4px;">Calcul auto : ${kmTotal} km — modifiez si le compteur dit autre chose</div>
+          </div>
+
+          <div style="margin-top:10px;padding:10px;background:#fff;border:1px solid #86efac;border-radius:8px;font-size:.85rem;">
+            <div style="font-weight:700;color:#1e40af;margin-bottom:6px;">🚗 Trajet</div>
+            <div style="padding:3px 0;">Domicile → ${Utils.escapeHtml(interventionsArr[0].numero)}${interventionsArr[0].nom ? ' · ' + Utils.escapeHtml(interventionsArr[0].nom) : ''} → Domicile</div>
+            ${interventionsArr[0].type ? `<div style="font-size:.78rem;color:#64748b;margin-top:2px;">${Utils.escapeHtml(interventionsArr[0].type)}</div>` : ''}
+            <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid #e2e8f0;margin-top:6px;">
+              <span>📍 Distance</span>
+              <strong id="tourneeFraisMontantReel">${kmTotal} km × ${bareme.toFixed(2)} € = ${montant.toFixed(2)} €</strong>
+            </div>
+          </div>
+
+          <div style="margin-top:10px;padding:10px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;font-size:.82rem;">
+            <div style="display:flex;justify-content:space-between;padding:6px 0;">
+              <span style="color:#166534;font-weight:800;font-size:.95rem;">💵 À REMBOURSER AU BÉNÉVOLE</span>
+              <strong id="tourneeFraisARembourser" style="color:#166534;font-size:1.15rem;">${montant.toFixed(2)} €</strong>
+            </div>
+          </div>
+
+          ${problemes.length > 0 ? `
+            <div style="margin-top:10px;padding:8px;background:#fef2f2;border-radius:6px;font-size:.78rem;color:#991b1b;">
+              ⚠️ Problèmes :<br>${problemes.join('<br>')}
+            </div>
+          ` : ''}
+        </div>
+      `;
+      } else {
+        // ===================== CAS TOURNÉE GROUPÉE =====================
+        msg = `
+        <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:14px;font-size:.88rem;margin-top:10px;">
+          <div style="font-weight:800;color:#166534;margin-bottom:8px;">✅ Déplacement créé : ${numero}</div>
+
+          <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed #86efac;">
+            <span>${Utils.escapeHtml(nomAffichage)}</span>
+            <strong id="tourneeFraisResume">${kmTotal} km · ${montant.toFixed(2)} €</strong>
+          </div>
+
+          <div style="margin-top:10px;padding:10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:.85rem;">
+            <label style="display:block;font-weight:700;color:#1e40af;margin-bottom:6px;">🚗 Km réels (relevé compteur)</label>
+            <input type="number" step="1" min="1" value="${kmTotal}" onchange="Tournee._ajusterKmManuel(this.value)" style="width:100%;padding:8px;border:1px solid #bfdbfe;border-radius:6px;font-size:1rem;font-weight:700;text-align:center;color:#1e40af;">
+            <div style="font-size:.72rem;color:#64748b;margin-top:4px;">Calcul auto : ${kmTotal} km — modifiez si le compteur dit autre chose</div>
           </div>
 
           <div style="margin-top:10px;padding:10px;background:#fff;border-radius:8px;font-size:.82rem;">
@@ -677,12 +798,12 @@ const Tournee = {
                 </tr>
               </thead>
               <tbody>
-                ${interventionsArr.map(r => `
+                ${interventionsArr.map((r, idx) => `
                   <tr style="border-bottom:1px solid #f1f5f9;">
                     <td style="padding:6px 2px;font-weight:600;font-size:.78rem;">${Utils.escapeHtml(r.numero)}${r.nom ? ' · ' + Utils.escapeHtml(r.nom) : ''}${r.type ? '<br><span style="font-weight:400;color:#64748b;">' + Utils.escapeHtml(r.type) + '</span>' : ''}</td>
                     <td style="text-align:right;padding:6px 2px;">${r.kmIndividuel} km</td>
                     <td style="text-align:right;padding:6px 2px;color:#64748b;">${(r.kmIndividuel * bareme).toFixed(2)} €</td>
-                    <td style="text-align:right;padding:6px 2px;color:#2563eb;font-weight:700;">${r.part.toFixed(2)} €</td>
+                    <td style="text-align:right;padding:6px 2px;color:#2563eb;font-weight:700;"><span class="tourneeFraisPart" data-idx="${idx}">${r.part.toFixed(2)} €</span></td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -691,7 +812,7 @@ const Tournee = {
                   <td style="padding:6px 2px;">TOTAL</td>
                   <td style="text-align:right;padding:6px 2px;">${totalKmInd} km</td>
                   <td style="text-align:right;padding:6px 2px;color:#64748b;">${totalVirtuel.toFixed(2)} €</td>
-                  <td style="text-align:right;padding:6px 2px;color:#166534;">${sommeParts.toFixed(2)} €</td>
+                  <td style="text-align:right;padding:6px 2px;color:#166534;"><span id="tourneeFraisSommeParts">${sommeParts.toFixed(2)} €</span></td>
                 </tr>
               </tfoot>
             </table>
@@ -701,7 +822,7 @@ const Tournee = {
             <div style="font-weight:700;margin-bottom:6px;color:#92400e;">💰 Bilan de la tournée</div>
             <div style="display:flex;justify-content:space-between;padding:3px 0;">
               <span>Coût réel (tournée groupée)</span>
-              <strong>${montant.toFixed(2)} €</strong>
+              <strong id="tourneeFraisMontantReel">${montant.toFixed(2)} €</strong>
             </div>
             <div style="display:flex;justify-content:space-between;padding:3px 0;">
               <span>Coût virtuel (si séparés)</span>
@@ -709,7 +830,11 @@ const Tournee = {
             </div>
             <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid #fcd34d;margin-top:6px;font-size:.92rem;">
               <span style="color:#166534;font-weight:800;">💰 Économie réalisée</span>
-              <strong style="color:#166534;">${economie.toFixed(2)} € (${pctEco} %)</strong>
+              <strong id="tourneeFraisEconomie" style="color:#166534;">${economie.toFixed(2)} € (${pctEco} %)</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:10px 0 0;border-top:2px solid #166534;margin-top:8px;">
+              <span style="color:#166534;font-weight:800;font-size:.95rem;">💵 À REMBOURSER AU BÉNÉVOLE</span>
+              <strong id="tourneeFraisARembourser" style="color:#166534;font-size:1.15rem;">${montant.toFixed(2)} €</strong>
             </div>
           </div>
 
@@ -724,6 +849,7 @@ const Tournee = {
           ` : ''}
         </div>
       `;
+      }
       if (statut) statut.innerHTML = msg;
 
       btn.textContent = '✅ Fermer';
