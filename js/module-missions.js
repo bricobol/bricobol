@@ -950,21 +950,64 @@ const Missions = {
     document.getElementById('missionsAssignId').value = id;
     document.getElementById('missionsAssignTitre').textContent = `${i.numero} · ${i.demandeur}`;
 
+    // Reset recherche
+    const rech = document.getElementById('missionsAssignRecherche');
+    if (rech) rech.value = '';
+
+    // Bénévoles disponibles (Bénévole + Adhérent bénéficiaire aussi bénévole)
     const benevoles = Storage.getAdherents()
       .filter(a => a.type === 'Bénévole' || (a.type === 'Adhérent bénéficiaire' && a.aussiBenevole))
       .map(a => `${a.prenom} ${a.nom}`)
       .sort();
 
-    const sel1 = document.getElementById('missionsAssignBenevole1');
-    const sel2 = document.getElementById('missionsAssignBenevole2');
+    // Ceux déjà assignés à cette intervention
+    const assignes = Storage.getBenevoles(i);
 
-    sel1.innerHTML = '<option value="">— Aucun —</option>' + 
-      benevoles.map(b => `<option value="${Utils.escapeHtml(b)}" ${i.benevole === b ? 'selected' : ''}>${Utils.escapeHtml(b)}</option>`).join('');
-
-    sel2.innerHTML = '<option value="">— Aucun —</option>' + 
-      benevoles.map(b => `<option value="${Utils.escapeHtml(b)}" ${i.benevole2 === b ? 'selected' : ''}>${Utils.escapeHtml(b)}</option>`).join('');
+    this._renderAssignListe(benevoles, assignes);
 
     document.getElementById('missionsAssignerModal').classList.add('active');
+  },
+
+  _renderAssignListe(benevoles, assignes, filtre) {
+    const container = document.getElementById('missionsAssignListe');
+    if (!container) return;
+
+    const f = (filtre || '').toLowerCase().trim();
+    const liste = f ? benevoles.filter(b => b.toLowerCase().includes(f)) : benevoles;
+
+    if (liste.length === 0) {
+      container.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-light);font-size:.85rem;">Aucun bénévole trouvé.</div>';
+    } else {
+      container.innerHTML = liste.map(b => {
+        const checked = assignes.includes(b);
+        return `
+          <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:${checked ? '#fff7ed' : '#fff'};border:1px solid ${checked ? '#f97316' : 'var(--border)'};border-radius:6px;margin-bottom:4px;cursor:pointer;">
+            <input type="checkbox" class="missionsAssignCheck" value="${Utils.escapeHtml(b)}" ${checked ? 'checked' : ''} onchange="Missions._compterAssign()" style="width:auto;">
+            <span style="font-size:.88rem;font-weight:500;">${Utils.escapeHtml(b)}</span>
+          </label>
+        `;
+      }).join('');
+    }
+
+    this._compterAssign();
+  },
+
+  filtrerAssignListe(filtre) {
+    const i = this.getAll().find(x => String(x.id) === String(document.getElementById('missionsAssignId').value));
+    if (!i) return;
+    const benevoles = Storage.getAdherents()
+      .filter(a => a.type === 'Bénévole' || (a.type === 'Adhérent bénéficiaire' && a.aussiBenevole))
+      .map(a => `${a.prenom} ${a.nom}`)
+      .sort();
+    // On garde les coches actuelles
+    const assignes = Array.from(document.querySelectorAll('.missionsAssignCheck:checked')).map(cb => cb.value);
+    this._renderAssignListe(benevoles, assignes, filtre);
+  },
+
+  _compterAssign() {
+    const nb = document.querySelectorAll('.missionsAssignCheck:checked').length;
+    const el = document.getElementById('missionsAssignCompteur');
+    if (el) el.textContent = `${nb} bénévole${nb > 1 ? 's' : ''} sélectionné${nb > 1 ? 's' : ''}`;
   },
 
   closeAssignerModal() { document.getElementById('missionsAssignerModal').classList.remove('active'); },
@@ -972,17 +1015,17 @@ const Missions = {
   confirmerAssigner(event) {
     event.preventDefault();
     const id = Number(document.getElementById('missionsAssignId').value);
-    const b1 = document.getElementById('missionsAssignBenevole1').value.trim();
-    const b2 = document.getElementById('missionsAssignBenevole2').value.trim();
 
-    if (b1 && b2 && b1 === b2) { alert('Le bénévole principal et secondaire sont identiques.'); return; }
+    // Récupérer les cases cochées dans l'ordre d'affichage
+    const checks = Array.from(document.querySelectorAll('.missionsAssignCheck:checked'));
+    const liste = checks.map(cb => cb.value);
 
     const list = this.getAll();
     const idx = list.findIndex(x => String(x.id) === String(id));
     if (idx === -1) { alert('Intervention introuvable.'); return; }
 
-    list[idx].benevole = b1 || '';
-    list[idx].benevole2 = b2 || '';
+    // Utiliser le helper qui synchronise benevoles + benevole/benevole2
+    Storage.setBenevoles(list[idx], liste);
 
     Interventions.saveAll(list);
     this.closeAssignerModal();
@@ -1266,7 +1309,7 @@ const Missions = {
 
       <!-- Modale ASSIGNER -->
       <div class="modal" id="missionsAssignerModal">
-        <div class="modal-content" style="max-width:520px;">
+        <div class="modal-content" style="max-width:560px;">
           <div class="modal-header">
             <h2>👤 Assigner les bénévoles</h2>
             <button class="close-btn" onclick="Missions.closeAssignerModal()">&times;</button>
@@ -1278,14 +1321,21 @@ const Missions = {
                 <div style="font-size:.75rem;color:#9a3412;text-transform:uppercase;font-weight:700;">Intervention</div>
                 <div style="font-size:1.05rem;font-weight:800;margin-top:4px;" id="missionsAssignTitre">—</div>
               </div>
+
               <div class="form-group">
-                <label>🤝 Bénévole principal</label>
-                <select id="missionsAssignBenevole1" style="padding:10px;border:1px solid var(--border);border-radius:8px;font-size:.9rem;width:100%;"></select>
+                <label>🔍 Rechercher un bénévole</label>
+                <input type="text" id="missionsAssignRecherche" placeholder="Tapez un nom..." oninput="Missions.filtrerAssignListe(this.value)" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:.92rem;">
               </div>
+
               <div class="form-group">
-                <label>🤝 Bénévole secondaire</label>
-                <select id="missionsAssignBenevole2" style="padding:10px;border:1px solid var(--border);border-radius:8px;font-size:.9rem;width:100%;"></select>
+                <label>🤝 Cochez les bénévoles mobilisés</label>
+                <div id="missionsAssignListe" style="max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:6px;background:#f8fafc;"></div>
               </div>
+
+              <div id="missionsAssignCompteur" style="padding:8px 12px;background:#fef3c7;border-radius:8px;font-size:.85rem;font-weight:700;color:#92400e;text-align:center;margin-bottom:14px;">
+                0 bénévole sélectionné
+              </div>
+
               <div style="display:flex;gap:10px;">
                 <button type="submit" class="btn" style="flex:1;background:#f97316;">💾 Enregistrer</button>
                 <button type="button" class="btn btn-ghost" onclick="Missions.closeAssignerModal()">Annuler</button>
