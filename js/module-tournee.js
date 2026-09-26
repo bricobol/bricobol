@@ -23,6 +23,8 @@ const Tournee = {
   // ---------- État du calcul de frais ----------
   _fraisEtat: {
     benevole: '',
+    benevoles: [],
+    adressesDepart: {},
     interventions: [],
     transitions: [],
     dernierCalcul: null
@@ -213,6 +215,130 @@ const Tournee = {
   // 🚗 CALCUL DES FRAIS D'UNE TOURNÉE
   // ============================================================
 
+  // Calcule les frais pour UN bénévole (utilise les coords pré-calculés)
+  // Retourne { ok:true, kmTotal, montant, interventionsArr, totalKmInd, ... }
+  //      ou { ok:false, erreur: '...' }
+    // Géocode une seule fois les interventions + transitions (commun à tous les bénévoles)
+  // Retourne { arretsInterv, coordsTransitions, problemes }
+  async _preparerArretsCommuns(etat, setStatut) {
+    const arretsInterv = [];
+    const problemes = [];
+
+    // Géocoder chaque intervention
+    for (let k = 0; k < etat.interventions.length; k++) {
+      const inter = Interventions.getAll().find(x => x.id === etat.interventions[k]);
+      if (!inter) {
+        arretsInterv.push(null);
+        problemes.push(`Intervention ${k + 1} introuvable`);
+        continue;
+      }
+
+      setStatut(`⏳ Géocodage intervention ${k + 1}/${etat.interventions.length} : ${inter.numero}...`);
+
+      let adresseArr = null;
+      let adh = null;
+      if (inter.adherentId) adh = Storage.getAdherents().find(a => a.id === inter.adherentId);
+      if (!adh && inter.demandeur) adh = this._trouverBenevole(inter.demandeur);
+      if (adh) adresseArr = [adh.adresse, adh.cp, adh.ville].filter(Boolean).join(', ');
+      if (!adresseArr && inter.description) {
+        const m = inter.description.match(/Adresse\s*:\s*([^\n]+)/i);
+        if (m && m[1]) adresseArr = m[1].trim();
+      }
+
+      if (!adresseArr) {
+        arretsInterv.push(null);
+        problemes.push(`${inter.numero} : adresse introuvable pour "${inter.demandeur}"`);
+        continue;
+      }
+
+      await new Promise(r => setTimeout(r, 250));
+      const coords = await Frais.geocode(adresseArr);
+      arretsInterv.push(coords);
+      if (!coords) problemes.push(`${inter.numero} : géocodage échoué (${adresseArr})`);
+    }
+
+    // Géocoder les transitions "autre"
+    const coordsTransitions = [];
+    for (let k = 0; k < etat.transitions.length; k++) {
+      const t = etat.transitions[k];
+      if (t.type === 'autre' && t.adresse) {
+        setStatut(`⏳ Géocodage lieu intermédiaire ${k + 1}...`);
+        await new Promise(r => setTimeout(r, 250));
+        const coords = await Frais.geocode(t.adresse);
+        coordsTransitions.push({ type: 'autre', coords });
+        if (!coords) problemes.push(`Lieu intermédiaire ${k + 1} : géocodage échoué (${t.adresse})`);
+      } else {
+        coordsTransitions.push({ type: t.type, coords: null });
+      }
+    }
+
+    return { arretsInterv, coordsTransitions, problemes };
+  },
+
+  _calculerFraisPourBenevole(nomBenevole, etat, arretsInterv, coordsTransitions, bareme, coordsDom) {
+    try {
+      // 1) Calculer la distance totale du trajet
+      const points = [coordsDom];
+      for (let k = 0; k < etat.interventions.length; k++) {
+        if (arretsInterv[k]) points.push(arretsInterv[k]);
+        if (k < etat.transitions.length) {
+          const t = coordsTransitions[k];
+          if (t && t.type === 'autre' && t.coords) points.push(t.coords);
+          else if (t && t.type === 'domicile') points.push(coordsDom);
+        }
+      }
+      points.push(coordsDom);
+
+      // 2) Calculer km et montant (async, donc on retourne une promesse)
+      return (async () => {
+        const kmTotal = Math.round(await Frais.route(points));
+        if (kmTotal <= 0) return { ok: false, erreur: 'Trajet non calculable (km = 0)' };
+
+        const montant = kmTotal * bareme;
+
+        // 3) Prorata individuel pour ce bénévole
+        const kmIndividuels = [];
+        for (let k = 0; k < etat.interventions.length; k++) {
+          if (!arretsInterv[k]) { kmIndividuels.push(0); continue; }
+          await new Promise(r => setTimeout(r, 150));
+          const kmInd = Math.round(await Frais.route([coordsDom, arretsInterv[k], coordsDom]));
+          kmIndividuels.push(kmInd || 0);
+        }
+        const totalKmInd = kmIndividuels.reduce((s, k) => s + k, 0);
+        const parts = kmIndividuels.map(km => totalKmInd > 0
+          ? (km / totalKmInd) * montant
+          : montant / etat.interventions.length);
+
+        // 4) Tableau interventions
+        const interventionsArr = etat.interventions.map((intId, k) => {
+          const i = Interventions.getAll().find(x => x.id === intId);
+          return {
+            numero: i ? i.numero : 'INT-???',
+            nom: i ? i.demandeur : '',
+            type: i ? i.type : '',
+            kmIndividuel: kmIndividuels[k],
+            part: parts[k]
+          };
+        });
+
+        const totalVirtuel = totalKmInd * bareme;
+        const economie = totalVirtuel - montant;
+
+        return {
+          ok: true,
+          kmTotal,
+          montant,
+          interventionsArr,
+          totalKmInd,
+          totalVirtuel,
+          economie
+        };
+      })();
+    } catch (e) {
+      return Promise.resolve({ ok: false, erreur: e.message });
+    }
+  },
+
   ouvrirCalculFrais(idOptionnel) {
     const jour = this.getJour();
     if (jour.length === 0) {
@@ -221,14 +347,28 @@ const Tournee = {
     }
 
     // Reset état
-    this._fraisEtat = { benevole: '', interventions: [], transitions: [] };
+    this._fraisEtat = {
+      benevole: '',
+      benevoles: [],
+      adressesDepart: {},
+      interventions: [],
+      transitions: [],
+      dernierCalcul: null
+    };
 
-    // Si ouvert depuis une ligne, pré-remplir
+    // Si ouvert depuis une ligne, pré-remplir avec les bénévoles assignés
     if (idOptionnel) {
       const inter = jour.find(x => x.id === idOptionnel);
       if (inter) {
-        this._fraisEtat.benevole = inter.benevole || '';
         this._fraisEtat.interventions = [inter.id];
+        const liste = (typeof Storage !== 'undefined' && Storage.getBenevoles)
+          ? Storage.getBenevoles(inter)
+          : (inter.benevole ? [inter.benevole] : []);
+        this._fraisEtat.benevoles = liste.slice();
+        liste.forEach(nom => {
+          this._fraisEtat.adressesDepart[nom] = this._adressePersoBenevole(nom);
+        });
+        this._fraisEtat.benevole = liste[0] || '';
       }
     }
 
@@ -238,6 +378,71 @@ const Tournee = {
 
   fermerCalculFrais() {
     document.getElementById('tourneeFraisModal').classList.remove('active');
+  },
+
+  // Récupère l'adresse perso d'un bénévole (dans l'annuaire)
+  _adressePersoBenevole(nom) {
+    if (!nom) return '';
+    const adh = Storage.getAdherents().find(a => {
+      const complet = `${a.prenom || ''} ${a.nom || ''}`.toLowerCase().trim();
+      const inverse = `${a.nom || ''} ${a.prenom || ''}`.toLowerCase().trim();
+      const cherche = nom.toLowerCase().trim();
+      return complet === cherche || inverse === cherche;
+    });
+    if (!adh) return '';
+    return adh.adresseDepart
+      || [adh.adresse, adh.cp, adh.ville, adh.pays].filter(Boolean).join(', ');
+  },
+
+  // Coche/décoche un bénévole dans la modale
+  _toggleBenevoleFrais(nom, checked) {
+    const etat = this._fraisEtat;
+    if (checked) {
+      if (!etat.benevoles.includes(nom)) {
+        etat.benevoles.push(nom);
+        etat.adressesDepart[nom] = this._adressePersoBenevole(nom);
+      }
+    } else {
+      etat.benevoles = etat.benevoles.filter(x => x !== nom);
+      delete etat.adressesDepart[nom];
+    }
+    // Compatibilité : premier bénévole dans l'ancien champ
+    etat.benevole = etat.benevoles[0] || '';
+    this._rendreModaleCalcul();
+  },
+
+  // Modifie l'adresse de départ d'un bénévole (pour ce calcul uniquement)
+  _changerAdresseDepart(nom, adresse) {
+    if (!this._fraisEtat.adressesDepart) this._fraisEtat.adressesDepart = {};
+    this._fraisEtat.adressesDepart[nom] = adresse;
+  },
+
+  // Réinitialise l'adresse de départ à l'adresse perso
+  _resetAdresseDepart(nom) {
+    if (!this._fraisEtat.adressesDepart) this._fraisEtat.adressesDepart = {};
+    this._fraisEtat.adressesDepart[nom] = this._adressePersoBenevole(nom);
+    this._rendreModaleCalcul();
+  },
+
+  // Mémorise l'adresse modifiée dans l'annuaire du bénévole
+  _memoriserAdresseDepart(nom) {
+    const nouvelle = (this._fraisEtat.adressesDepart || {})[nom];
+    if (!nouvelle) { alert('Aucune adresse à mémoriser.'); return; }
+
+    const adhList = Storage.getAdherents();
+    const idx = adhList.findIndex(a => {
+      const complet = `${a.prenom || ''} ${a.nom || ''}`.toLowerCase().trim();
+      const inverse = `${a.nom || ''} ${a.prenom || ''}`.toLowerCase().trim();
+      const cherche = nom.toLowerCase().trim();
+      return complet === cherche || inverse === cherche;
+    });
+    if (idx === -1) { alert('Bénévole introuvable dans l\'annuaire.'); return; }
+
+    if (!confirm(`Mémoriser cette adresse comme adresse de départ permanente de ${nom} ?\n\n"${nouvelle}"`)) return;
+
+    adhList[idx].adresseDepart = nouvelle;
+    Storage.saveAdherents(adhList);
+    alert('✅ Adresse mémorisée dans l\'annuaire.');
   },
   
   _ajusterKmManuel(newKmStr) {
@@ -316,38 +521,68 @@ const Tournee = {
       .map(a => `${a.prenom} ${a.nom}`)
       .sort();
 
-    // HTML sélection bénévole
+    // === Liste à cocher des bénévoles ===
     let html = `
       <div class="form-group">
-        <label>👤 Bénévole *</label>
-        <select onchange="Tournee._changerBenevole(this.value)" style="padding:10px;border:1px solid var(--border);border-radius:8px;font-size:.92rem;width:100%;">
-          <option value="">— Choisir un bénévole —</option>
-          ${benevoles.map(b => `<option value="${Utils.escapeHtml(b)}" ${etat.benevole === b ? 'selected' : ''}>${Utils.escapeHtml(b)}</option>`).join('')}
-        </select>
+        <label>👤 Bénévoles mobilisés (${etat.benevoles.length})</label>
+        <div style="border:1px solid var(--border);border-radius:8px;padding:8px;background:var(--bg-alt);max-height:340px;overflow-y:auto;">
+          ${benevoles.length === 0
+            ? '<p style="color:var(--text-light);text-align:center;padding:10px;font-size:.85rem;">Aucun bénévole dans l\'annuaire.</p>'
+            : benevoles.map(b => {
+              const checked = etat.benevoles.includes(b);
+              const adresse = etat.adressesDepart[b] || '';
+              const adressePerso = this._adressePersoBenevole(b);
+              const estModifiee = checked && adresse && adresse !== adressePerso;
+              return `
+                <div style="background:#fff;border:1px solid ${checked ? '#f97316' : 'var(--border)'};border-radius:8px;margin-bottom:6px;overflow:hidden;">
+                  <label style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer;${checked ? 'background:#fff7ed;' : ''}">
+                    <input type="checkbox" class="tourneeFraisBenevoleCheck" data-nom="${Utils.escapeHtml(b)}" ${checked ? 'checked' : ''} onchange="Tournee._toggleBenevoleFrais(this.dataset.nom, this.checked)" style="width:auto;">
+                    <span style="flex:1;font-size:.9rem;font-weight:600;">${Utils.escapeHtml(b)}</span>
+                    ${estModifiee ? '<span class="badge badge-warning" style="font-size:.65rem;">📍 modifiée</span>' : ''}
+                  </label>
+                  ${checked ? `
+                    <div style="padding:8px 12px 12px;border-top:1px dashed var(--border);background:#fff7ed;">
+                      <label style="display:block;font-size:.72rem;color:#9a3412;font-weight:700;margin-bottom:4px;">🏠 Adresse de départ</label>
+                      <input type="text" class="tourneeFraisAdresseInput" data-nom="${Utils.escapeHtml(b)}" value="${Utils.escapeHtml(adresse)}" placeholder="Adresse de départ..." onchange="Tournee._changerAdresseDepart(this.dataset.nom, this.value)" style="width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:.82rem;margin-bottom:6px;">
+                      <div style="display:flex;gap:6px;">
+                        <button type="button" class="btn btn-ghost" style="padding:4px 10px;font-size:.72rem;" data-nom="${Utils.escapeHtml(b)}" onclick="Tournee._resetAdresseDepart(this.dataset.nom)" title="Revenir à l'adresse perso">🏠 Perso</button>
+                        <button type="button" class="btn btn-ghost" style="padding:4px 10px;font-size:.72rem;" data-nom="${Utils.escapeHtml(b)}" onclick="Tournee._memoriserAdresseDepart(this.dataset.nom)" title="Mémoriser dans l'annuaire">💾 Mémoriser</button>
+                      </div>
+                    </div>
+                  ` : ''}
+                </div>
+              `;
+            }).join('')}
+        </div>
+        <p style="font-size:.75rem;color:var(--text-light);margin-top:6px;">
+          💡 Si un bénévole rejoint un point de rendez-vous, modifiez son adresse de départ.
+        </p>
       </div>
     `;
 
-    // Si pas de bénévole sélectionné, on s'arrête là
-    if (!etat.benevole) {
+    // Si aucun bénévole coché, on s'arrête là
+    if (etat.benevoles.length === 0) {
       html += `<p style="color:var(--text-light);text-align:center;padding:20px;font-size:.88rem;">
-        Sélectionnez un bénévole pour voir ses interventions du jour.
+        Cochez au moins un bénévole pour continuer.
       </p>`;
       body.innerHTML = html;
       return;
     }
 
-    // Interventions du jour + celles déjà dans le déplacement en cours
+    // === Interventions ===
     html += `
       <div class="form-group">
         <label>📅 Interventions à inclure dans la tournée</label>
         <div style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px;background:var(--bg-alt);">
           ${jour.map(i => {
             const checked = etat.interventions.includes(i.id);
-            const autreBenev = i.benevole && i.benevole !== etat.benevole;
-            const sansBenev = !i.benevole;
+            const bvInter = Storage.getBenevoles(i);
             let hint = '';
-            if (autreBenev) hint = `<span style="color:#dc2626;font-size:.72rem;"> · assignée à ${Utils.escapeHtml(i.benevole)}</span>`;
-            if (sansBenev) hint = `<span style="color:#f59e0b;font-size:.72rem;"> · pas de bénévole</span>`;
+            if (bvInter.length === 0) {
+              hint = `<span style="color:#f59e0b;font-size:.72rem;"> · pas de bénévole</span>`;
+            } else if (!bvInter.some(b => etat.benevoles.includes(b))) {
+              hint = `<span style="color:#dc2626;font-size:.72rem;"> · assignée à ${Utils.escapeHtml(bvInter.join(', '))}</span>`;
+            }
             return `
               <label style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:#fff;border:1px solid ${checked ? 'var(--accent)' : 'var(--border)'};border-radius:6px;margin-bottom:6px;cursor:pointer;">
                 <input type="checkbox" ${checked ? 'checked' : ''} onchange="Tournee._toggleIntervention(${i.id}, this.checked)" style="width:auto;">
@@ -364,28 +599,28 @@ const Tournee = {
       </div>
     `;
 
-    // Si interventions cochées, afficher les transitions
+    // === Enchaînement du trajet (commun à tous les bénévoles) ===
     if (etat.interventions.length > 0) {
       html += `<div class="form-group">
-        <label>🚗 Enchaînement du trajet</label>
+        <label>🚗 Enchaînement du trajet (identique pour tous)</label>
         <div style="padding:12px;background:#f0f9ff;border:1px solid #bfdbfe;border-radius:10px;font-size:.85rem;">
       `;
 
-      // Départ
-      html += this._renderEtapeDomicile('Départ', etat.benevole);
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:#fef3c7;border-radius:6px;margin:6px 0;font-size:.82rem;">
+        <span style="font-size:1.1rem;">🏠</span>
+        <strong>Départ</strong> · adresse propre à chaque bénévole
+      </div>`;
 
       etat.interventions.forEach((intId, idx) => {
         const inter = Interventions.getAll().find(x => x.id === intId);
         if (!inter) return;
 
-        // Transition AVANT cette intervention (sauf pour la 1ère)
         if (idx > 0) {
           const transIdx = idx - 1;
           const trans = etat.transitions[transIdx] || { type: 'direct', adresse: '' };
-          html += this._renderTransition(transIdx, trans, etat.benevole);
+          html += this._renderTransition(transIdx, trans, etat.benevoles[0] || '');
         }
 
-        // L'intervention
         html += `
           <div style="display:flex;align-items:center;gap:8px;padding:8px;background:#fff;border-left:3px solid var(--accent);border-radius:6px;margin:6px 0;">
             <span style="font-size:1.1rem;">🛠️</span>
@@ -398,17 +633,24 @@ const Tournee = {
         `;
       });
 
-      // Arrivée
-      html += this._renderEtapeDomicile('Arrivée', etat.benevole);
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:#fef3c7;border-radius:6px;margin:6px 0;font-size:.82rem;">
+        <span style="font-size:1.1rem;">🏠</span>
+        <strong>Arrivée</strong> · retour au domicile
+      </div>`;
 
       html += `</div></div>`;
     }
 
-    // Boutons
+    // === Boutons ===
+    const nbBenevoles = etat.benevoles.length;
+    const labelBtn = nbBenevoles === 1
+      ? '🚗 Calculer et créer le déplacement'
+      : `🚗 Calculer et créer ${nbBenevoles} déplacements`;
+
     html += `
       <div style="display:flex;gap:10px;margin-top:16px;">
         <button type="button" class="btn" id="tourneeFraisCalcBtn" style="flex:1;background:var(--accent);" onclick="Tournee.lancerCalculFrais()">
-          🚗 Calculer et créer le déplacement
+          ${labelBtn}
         </button>
         <button type="button" class="btn btn-ghost" onclick="Tournee.fermerCalculFrais()">Annuler</button>
       </div>
@@ -516,7 +758,7 @@ const Tournee = {
     const statut = document.getElementById('tourneeFraisStatut');
     const btn = document.getElementById('tourneeFraisCalcBtn');
 
-    if (!etat.benevole) { alert('Choisissez un bénévole.'); return; }
+    if (!etat.benevoles || etat.benevoles.length === 0) { alert('Cochez au moins un bénévole.'); return; }
     if (etat.interventions.length === 0) { alert('Cochez au moins une intervention.'); return; }
 
     // 1) Vérifier anti-doublon
@@ -526,25 +768,24 @@ const Tournee = {
       if (!confirm(`⚠️ ${depsExistants.length} déplacement(s) existant(s) (${nums}) contiennent certaines de ces interventions.\n\nIls seront SUPPRIMÉS et remplacés par le nouveau calcul.\n\nContinuer ?`)) return;
     }
 
-    // 2) Vérifier les interventions sans bénévole ou assignées à un autre
+    // 2) Vérifier les interventions sans bénévole
     const soucis = [];
     etat.interventions.forEach(id => {
       const i = Interventions.getAll().find(x => x.id === id);
       if (!i) return;
-      if (!i.benevole) soucis.push(`${i.numero} n'a pas de bénévole (sera assigné à ${etat.benevole})`);
-      else if (i.benevole !== etat.benevole) soucis.push(`${i.numero} est assignée à ${i.benevole} (sera réassignée à ${etat.benevole})`);
+      const bvInter = Storage.getBenevoles(i);
+      if (bvInter.length === 0) soucis.push(`${i.numero} n'a pas de bénévole`);
     });
     if (soucis.length > 0) {
-      if (!confirm(`⚠️ Attention :\n\n${soucis.join('\n')}\n\nContinuer ?`)) return;
+      if (!confirm(`⚠️ Attention :\n\n${soucis.join('\n')}\n\nContinuer quand même ?`)) return;
     }
 
-    // 3) Récupérer bénévole
-    const benevole = this._trouverBenevole(etat.benevole);
-    if (!benevole) { alert('Bénévole introuvable dans l\'annuaire.'); return; }
-
-    const adresseDepart = benevole.adresseDepart || 
-      [benevole.adresse, benevole.cp, benevole.ville, benevole.pays].filter(Boolean).join(', ');
-    if (!adresseDepart) { alert('Le bénévole n\'a pas d\'adresse renseignée.'); return; }
+    // 3) Vérifier les adresses de départ
+    const sansAdresse = etat.benevoles.filter(nom => !etat.adressesDepart[nom] || !etat.adressesDepart[nom].trim());
+    if (sansAdresse.length > 0) {
+      alert('Ces bénévoles n\'ont pas d\'adresse de départ :\n\n' + sansAdresse.join('\n'));
+      return;
+    }
 
     // 4) Lancer le calcul
     btn.disabled = true;
@@ -556,300 +797,191 @@ const Tournee = {
     };
 
     try {
-      // a) Géocoder domicile
-      setStatut('⏳ Géocodage du domicile...');
-      const coordsDom = await Frais.geocode(adresseDepart);
-      if (!coordsDom) throw new Error('Impossible de géocoder le domicile : ' + adresseDepart);
+      const bareme = Frais.getBareme();
 
-      // b) Géocoder chaque intervention (adresse de l'adhérent ou "Adresse :" dans description)
-      const arretsInterv = [];  // coords alignées avec etat.interventions
-      const problemes = [];
+      // a) Préparer les arrêts communs (une seule fois)
+      const prep = await this._preparerArretsCommuns(etat, setStatut);
 
-      for (let k = 0; k < etat.interventions.length; k++) {
-        const inter = Interventions.getAll().find(x => x.id === etat.interventions[k]);
-        if (!inter) { arretsInterv.push(null); problemes.push(`Intervention ${k + 1} introuvable`); continue; }
+      // b) Pour chaque bénévole : calcul + création d'un déplacement
+      const depsList = Storage.getDeplacements();
+      const depsAvecIds = new Set(depsExistants.map(d => d.id));
+      let depsFinal = depsList.filter(d => !depsAvecIds.has(d.id));
 
-        setStatut(`⏳ Géocodage ${k + 1}/${etat.interventions.length} : ${inter.numero}...`);
+      const resultats = [];
+      const erreurs = [];
+      const problemesGlobaux = [...prep.problemes];
 
-        let adresseArr = null;
-        let adh = null;
-        if (inter.adherentId) adh = Storage.getAdherents().find(a => a.id === inter.adherentId);
-        if (!adh && inter.demandeur) adh = this._trouverBenevole(inter.demandeur);
-        if (adh) adresseArr = [adh.adresse, adh.cp, adh.ville].filter(Boolean).join(', ');
-        if (!adresseArr && inter.description) {
-          const m = inter.description.match(/Adresse\s*:\s*([^\n]+)/i);
-          if (m && m[1]) adresseArr = m[1].trim();
-        }
+      for (let b = 0; b < etat.benevoles.length; b++) {
+        const nomBenevole = etat.benevoles[b];
+        const adresseDepart = etat.adressesDepart[nomBenevole];
 
-        if (!adresseArr) {
-          arretsInterv.push(null);
-          problemes.push(`${inter.numero} : adresse introuvable pour "${inter.demandeur}"`);
+        setStatut(`⏳ Bénévole ${b + 1}/${etat.benevoles.length} : géocodage de ${nomBenevole}...`);
+
+        await new Promise(r => setTimeout(r, 250));
+        const coordsDom = await Frais.geocode(adresseDepart);
+        if (!coordsDom) {
+          erreurs.push(`${nomBenevole} : géocodage échoué (${adresseDepart})`);
           continue;
         }
 
-        await new Promise(r => setTimeout(r, 300));
-        const coords = await Frais.geocode(adresseArr);
-        arretsInterv.push(coords);
-        if (!coords) problemes.push(`${inter.numero} : géocodage échoué (${adresseArr})`);
-      }
+        setStatut(`🚗 Calcul du trajet de ${nomBenevole}...`);
+        const res = await this._calculerFraisPourBenevole(
+          nomBenevole, etat, prep.arretsInterv, prep.coordsTransitions, bareme, coordsDom
+        );
 
-      // c) Géocoder les transitions "autre"
-      const coordsTransitions = [];  // [idx] = { type, coordsLieu }
-      for (let k = 0; k < etat.transitions.length; k++) {
-        const t = etat.transitions[k];
-        if (t.type === 'autre' && t.adresse) {
-          setStatut(`⏳ Géocodage lieu intermédiaire ${k + 1}...`);
-          await new Promise(r => setTimeout(r, 300));
-          const coords = await Frais.geocode(t.adresse);
-          coordsTransitions.push({ type: 'autre', coords });
-          if (!coords) problemes.push(`Lieu intermédiaire ${k + 1} : géocodage échoué (${t.adresse})`);
-        } else {
-          coordsTransitions.push({ type: t.type, coords: null });
+        if (!res.ok) {
+          erreurs.push(`${nomBenevole} : ${res.erreur}`);
+          continue;
         }
-      }
 
-      // d) Construire la séquence de points
-      // Points = [domicile, inter1, transition1?, inter2, transition2?, inter3, ..., domicile]
-      const points = [coordsDom];
-      for (let k = 0; k < etat.interventions.length; k++) {
-        if (arretsInterv[k]) points.push(arretsInterv[k]);
-        if (k < etat.transitions.length) {
-          const t = coordsTransitions[k];
-          if (t && t.type === 'autre' && t.coords) points.push(t.coords);
-          else if (t && t.type === 'domicile') points.push(coordsDom);
-          // Si 'direct' → rien entre les deux
-        }
-      }
-      points.push(coordsDom);
+        const n = depsFinal.length + 1;
+        const numero = 'DEP-' + String(n).padStart(3, '0');
+        const nomAffichage = etat.interventions.length > 1
+          ? `${nomBenevole} (${etat.interventions.length} interventions)`
+          : nomBenevole;
+        const trajet = 'Domicile → ' + etat.interventions.map((intId) => {
+          const i = Interventions.getAll().find(x => x.id === intId);
+          return i ? i.numero : '?';
+        }).join(' → ') + ' → Domicile';
 
-      // e) Calculer la distance totale
-      setStatut('🚗 Calcul de l\'itinéraire complet...');
-      await new Promise(r => setTimeout(r, 200));
-      const kmTotal = Math.round(await Frais.route(points));
-      if (kmTotal <= 0) throw new Error('Trajet non calculable (km = 0)');
-
-      const bareme = Frais.getBareme();
-      const montant = kmTotal * bareme;
-
-      // f) Calculer le prorata (comme dans Frais)
-      // Pour chaque intervention : km individuel = domicile → interv → domicile
-      const kmIndividuels = [];
-      const problemesIndiv = [];
-      for (let k = 0; k < etat.interventions.length; k++) {
-        if (!arretsInterv[k]) { kmIndividuels.push(0); continue; }
-        setStatut(`🚗 Trajet individuel ${k + 1}/${etat.interventions.length}...`);
-        await new Promise(r => setTimeout(r, 200));
-        const kmInd = Math.round(await Frais.route([coordsDom, arretsInterv[k], coordsDom]));
-        kmIndividuels.push(kmInd || 0);
-        if (!kmInd) problemesIndiv.push(`${etat.interventions[k]}`);
-      }
-      const totalKmInd = kmIndividuels.reduce((s, k) => s + k, 0);
-      const parts = kmIndividuels.map(km => totalKmInd > 0 ? (km / totalKmInd) * montant : montant / etat.interventions.length);
-
-      // g) Construire le tableau interventions du déplacement (format Frais)
-      const interventionsArr = etat.interventions.map((intId, k) => {
-        const i = Interventions.getAll().find(x => x.id === intId);
-        return {
-          numero: i ? i.numero : 'INT-???',
-          nom: i ? i.demandeur : '',
-          type: i ? i.type : '',
-          kmIndividuel: kmIndividuels[k],
-          part: parts[k]
+        const deplacement = {
+          id: Date.now() + Math.random(),
+          numero: numero,
+          date: Utils.todayISO(),
+          benevole: nomAffichage,
+          km: res.kmTotal,
+          trajet: trajet,
+          motif: etat.interventions.length > 1
+            ? `Tournée groupée (${etat.interventions.length} interventions)`
+            : `Intervention ${res.interventionsArr[0].numero}`,
+          notes: '',
+          rembourse: false,
+          montant: res.montant,
+          bareme: bareme,
+          interventions: res.interventionsArr
         };
-      });
+        depsFinal.push(deplacement);
 
-      // h) Nettoyer les anciens déplacements (déjà validé par confirm)
-      const depsList = Storage.getDeplacements();
-      const depsAvecIds = new Set(depsExistants.map(d => d.id));
-      const depsFinal = depsList.filter(d => !depsAvecIds.has(d.id));
+        resultats.push({
+          nomBenevole,
+          adresseDepart,
+          numero: deplacement.numero,
+          deplacementId: deplacement.id,
+          kmTotal: res.kmTotal,
+          montant: res.montant,
+          interventionsArr: res.interventionsArr,
+          totalKmInd: res.totalKmInd,
+          totalVirtuel: res.totalVirtuel,
+          economie: res.economie
+        });
+      }
 
-      // i) Nom du déplacement
-      const nomAffichage = etat.interventions.length > 1
-        ? `${etat.benevole} (${etat.interventions.length} interventions)`
-        : etat.benevole;
-
-      // j) Créer le nouveau déplacement
-      const n = depsFinal.length + 1;
-      const numero = 'DEP-' + String(n).padStart(3, '0');
-      const trajet = 'Domicile → ' + etat.interventions.map((intId) => {
-        const i = Interventions.getAll().find(x => x.id === intId);
-        return i ? i.numero : '?';
-      }).join(' → ') + ' → Domicile';
-
-      const deplacement = {
-        id: Date.now() + Math.random(),
-        numero: numero,
-        date: Utils.todayISO(),
-        benevole: nomAffichage,
-        km: kmTotal,
-        trajet: trajet,
-        motif: etat.interventions.length > 1 
-          ? `Tournée groupée (${etat.interventions.length} interventions)` 
-          : `Intervention ${interventionsArr[0].numero}`,
-        notes: '',
-        rembourse: false,
-        montant: montant,
-        bareme: bareme,
-        interventions: interventionsArr
-      };
-      depsFinal.push(deplacement);
       Storage.saveDeplacements(depsFinal);
-            this._fraisEtat.dernierCalcul = {
-        interventionsArr: interventionsArr.map(r => ({ ...r })),
-        totalKmInd: totalKmInd,
-        bareme: bareme,
-        deplacementId: deplacement.id,
-        numero: numero
-      };
+      this._derniersResultats = resultats;
+      this._derniersResultats = resultats;
 
-      // k) Mettre à jour les interventions (assignation bénévole)
+      // c) Mettre à jour les interventions (assigner TOUS les bénévoles)
       const interList = Interventions.getAll();
       let assignationsMaj = 0;
       etat.interventions.forEach(id => {
         const idx = interList.findIndex(x => x.id === id);
-        if (idx !== -1 && interList[idx].benevole !== etat.benevole) {
-          interList[idx].benevole = etat.benevole;
+        if (idx === -1) return;
+        const actuels = Storage.getBenevoles(interList[idx]);
+        const fusion = Array.from(new Set([...actuels, ...etat.benevoles]));
+        if (JSON.stringify(fusion) !== JSON.stringify(actuels)) {
+          Storage.setBenevoles(interList[idx], fusion);
           assignationsMaj++;
         }
       });
       if (assignationsMaj > 0) Interventions.saveAll(interList);
 
-      // l) Rafraîchir tous les modules concernés
+      // d) Rafraîchir
       if (typeof Frais !== 'undefined' && Frais.render) Frais.render();
       if (typeof Dashboard !== 'undefined' && Dashboard.render) Dashboard.render();
       this.render();
       if (typeof Agenda !== 'undefined' && Agenda.render) Agenda.render();
       BricoBol.updateStorageInfo();
 
-      // m) Afficher le résultat
-      const totalVirtuel = totalKmInd * bareme;
-      const economie = totalVirtuel - montant;
-      const pctEco = totalVirtuel > 0 ? ((economie / totalVirtuel) * 100).toFixed(0) : 0;
-      const sommeParts = interventionsArr.reduce((s, r) => s + r.part, 0);
-
-      let msg;
-      if (interventionsArr.length === 1) {
-        // ===================== CAS 1 SEULE INTERVENTION =====================
-        msg = `
+      // e) Message de résultat
+      let msg = `
         <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:14px;font-size:.88rem;margin-top:10px;">
-          <div style="font-weight:800;color:#166534;margin-bottom:8px;">✅ Déplacement créé : ${numero}</div>
-
-          <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed #86efac;">
-            <span>${Utils.escapeHtml(nomAffichage)}</span>
-            <strong id="tourneeFraisResume">${kmTotal} km · ${montant.toFixed(2)} €</strong>
+          <div style="font-weight:800;color:#166534;margin-bottom:10px;">
+            ✅ ${resultats.length} déplacement${resultats.length > 1 ? 's' : ''} créé${resultats.length > 1 ? 's' : ''}
           </div>
-
-          <div style="margin-top:10px;padding:10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:.85rem;">
-            <label style="display:block;font-weight:700;color:#1e40af;margin-bottom:6px;">🚗 Km réels (relevé compteur)</label>
-            <input type="number" step="1" min="1" value="${kmTotal}" onchange="Tournee._ajusterKmManuel(this.value)" style="width:100%;padding:8px;border:1px solid #bfdbfe;border-radius:6px;font-size:1rem;font-weight:700;text-align:center;color:#1e40af;">
-            <div style="font-size:.72rem;color:#64748b;margin-top:4px;">Calcul auto : ${kmTotal} km — modifiez si le compteur dit autre chose</div>
-          </div>
-
-          <div style="margin-top:10px;padding:10px;background:#fff;border:1px solid #86efac;border-radius:8px;font-size:.85rem;">
-            <div style="font-weight:700;color:#1e40af;margin-bottom:6px;">🚗 Trajet</div>
-            <div style="padding:3px 0;">Domicile → ${Utils.escapeHtml(interventionsArr[0].numero)}${interventionsArr[0].nom ? ' · ' + Utils.escapeHtml(interventionsArr[0].nom) : ''} → Domicile</div>
-            ${interventionsArr[0].type ? `<div style="font-size:.78rem;color:#64748b;margin-top:2px;">${Utils.escapeHtml(interventionsArr[0].type)}</div>` : ''}
-            <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid #e2e8f0;margin-top:6px;">
-              <span>📍 Distance</span>
-              <strong id="tourneeFraisMontantReel">${kmTotal} km × ${bareme.toFixed(2)} € = ${montant.toFixed(2)} €</strong>
-            </div>
-          </div>
-
-          <div style="margin-top:10px;padding:10px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;font-size:.82rem;">
-            <div style="display:flex;justify-content:space-between;padding:6px 0;">
-              <span style="color:#166534;font-weight:800;font-size:.95rem;">💵 À REMBOURSER AU BÉNÉVOLE</span>
-              <strong id="tourneeFraisARembourser" style="color:#166534;font-size:1.15rem;">${montant.toFixed(2)} €</strong>
-            </div>
-          </div>
-
-          ${problemes.length > 0 ? `
-            <div style="margin-top:10px;padding:8px;background:#fef2f2;border-radius:6px;font-size:.78rem;color:#991b1b;">
-              ⚠️ Problèmes :<br>${problemes.join('<br>')}
-            </div>
-          ` : ''}
-        </div>
       `;
-      } else {
-        // ===================== CAS TOURNÉE GROUPÉE =====================
-        msg = `
-        <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:14px;font-size:.88rem;margin-top:10px;">
-          <div style="font-weight:800;color:#166534;margin-bottom:8px;">✅ Déplacement créé : ${numero}</div>
 
-          <div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed #86efac;">
-            <span>${Utils.escapeHtml(nomAffichage)}</span>
-            <strong id="tourneeFraisResume">${kmTotal} km · ${montant.toFixed(2)} €</strong>
-          </div>
-
-          <div style="margin-top:10px;padding:10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:.85rem;">
-            <label style="display:block;font-weight:700;color:#1e40af;margin-bottom:6px;">🚗 Km réels (relevé compteur)</label>
-            <input type="number" step="1" min="1" value="${kmTotal}" onchange="Tournee._ajusterKmManuel(this.value)" style="width:100%;padding:8px;border:1px solid #bfdbfe;border-radius:6px;font-size:1rem;font-weight:700;text-align:center;color:#1e40af;">
-            <div style="font-size:.72rem;color:#64748b;margin-top:4px;">Calcul auto : ${kmTotal} km — modifiez si le compteur dit autre chose</div>
-          </div>
-
-          <div style="margin-top:10px;padding:10px;background:#fff;border-radius:8px;font-size:.82rem;">
-            <div style="font-weight:700;margin-bottom:6px;color:#1e40af;">📊 Détail du prorata</div>
-            <table style="width:100%;border-collapse:collapse;">
-              <thead>
-                <tr style="border-bottom:1px solid #e2e8f0;">
-                  <th style="text-align:left;padding:4px 2px;font-size:.72rem;color:#64748b;">Intervention</th>
-                  <th style="text-align:right;padding:4px 2px;font-size:.72rem;color:#64748b;">Km seul</th>
-                  <th style="text-align:right;padding:4px 2px;font-size:.72rem;color:#64748b;">Prix seul</th>
-                  <th style="text-align:right;padding:4px 2px;font-size:.72rem;color:#64748b;">Part</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${interventionsArr.map((r, idx) => `
-                  <tr style="border-bottom:1px solid #f1f5f9;">
-                    <td style="padding:6px 2px;font-weight:600;font-size:.78rem;">${Utils.escapeHtml(r.numero)}${r.nom ? ' · ' + Utils.escapeHtml(r.nom) : ''}${r.type ? '<br><span style="font-weight:400;color:#64748b;">' + Utils.escapeHtml(r.type) + '</span>' : ''}</td>
-                    <td style="text-align:right;padding:6px 2px;">${r.kmIndividuel} km</td>
-                    <td style="text-align:right;padding:6px 2px;color:#64748b;">${(r.kmIndividuel * bareme).toFixed(2)} €</td>
-                    <td style="text-align:right;padding:6px 2px;color:#2563eb;font-weight:700;"><span class="tourneeFraisPart" data-idx="${idx}">${r.part.toFixed(2)} €</span></td>
-                  </tr>
+      resultats.forEach(r => {
+        const estUne = r.interventionsArr.length === 1;
+        msg += `
+          <div style="background:#fff;border:1px solid #86efac;border-radius:8px;padding:12px;margin-bottom:10px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:8px;border-bottom:1px dashed #86efac;margin-bottom:8px;">
+              <div>
+                <div style="font-weight:700;color:#166534;">👤 ${Utils.escapeHtml(r.nomBenevole)}</div>
+                <div style="font-size:.72rem;color:#64748b;margin-top:2px;">${Utils.escapeHtml(r.adresseDepart)}</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:.72rem;color:#64748b;">${r.numero}</div>
+                <div style="font-weight:800;color:#166534;font-size:1.05rem;">${r.montant.toFixed(2)} €</div>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:3px 0;font-size:.82rem;gap:8px;align-items:center;">
+              <span style="flex-shrink:0;">📍 Km réels</span>
+              <div style="display:flex;align-items:center;gap:6px;flex:1;justify-content:flex-end;">
+                <input type="number" step="0.1" min="0" value="${r.kmTotal}" onchange="Tournee._ajusterKmBenevole(${resultats.indexOf(r)}, this.value)" style="width:80px;padding:4px 8px;border:1px solid #bfdbfe;border-radius:6px;font-size:.85rem;font-weight:700;text-align:right;color:#1e40af;">
+                <span>× ${bareme.toFixed(2)} € =</span>
+                <strong id="tourneeFraisMontant_${resultats.indexOf(r)}">${r.montant.toFixed(2)} €</strong>
+              </div>
+            </div>
+            ${!estUne ? `
+              <div style="margin-top:8px;padding:8px;background:#eff6ff;border-radius:6px;font-size:.78rem;">
+                <div style="font-weight:700;color:#1e40af;margin-bottom:4px;">📊 Prorata (${r.interventionsArr.length} interventions)</div>
+                ${r.interventionsArr.map(ri => `
+                  <div style="display:flex;justify-content:space-between;padding:2px 0;">
+                    <span>${Utils.escapeHtml(ri.numero)}${ri.nom ? ' · ' + Utils.escapeHtml(ri.nom) : ''}</span>
+                    <span>${ri.kmIndividuel} km → <strong>${ri.part.toFixed(2)} €</strong></span>
+                  </div>
                 `).join('')}
-              </tbody>
-              <tfoot>
-                <tr style="border-top:2px solid #86efac;font-weight:800;">
-                  <td style="padding:6px 2px;">TOTAL</td>
-                  <td style="text-align:right;padding:6px 2px;">${totalKmInd} km</td>
-                  <td style="text-align:right;padding:6px 2px;color:#64748b;">${totalVirtuel.toFixed(2)} €</td>
-                  <td style="text-align:right;padding:6px 2px;color:#166534;"><span id="tourneeFraisSommeParts">${sommeParts.toFixed(2)} €</span></td>
-                </tr>
-              </tfoot>
-            </table>
+                <div style="display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid #bfdbfe;margin-top:4px;font-weight:700;">
+                  <span>Total virtuel</span>
+                  <span>${r.totalVirtuel.toFixed(2)} €</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;padding:2px 0;color:#166534;font-weight:700;">
+                  <span>💰 Économie</span>
+                  <span>${r.economie.toFixed(2)} €</span>
+                </div>
+              </div>
+            ` : ''}
           </div>
+        `;
+      });
 
-          <div style="margin-top:10px;padding:10px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;font-size:.82rem;">
-            <div style="font-weight:700;margin-bottom:6px;color:#92400e;">💰 Bilan de la tournée</div>
-            <div style="display:flex;justify-content:space-between;padding:3px 0;">
-              <span>Coût réel (tournée groupée)</span>
-              <strong id="tourneeFraisMontantReel">${montant.toFixed(2)} €</strong>
-            </div>
-            <div style="display:flex;justify-content:space-between;padding:3px 0;">
-              <span>Coût virtuel (si séparés)</span>
-              <strong>${totalVirtuel.toFixed(2)} €</strong>
-            </div>
-            <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px solid #fcd34d;margin-top:6px;font-size:.92rem;">
-              <span style="color:#166534;font-weight:800;">💰 Économie réalisée</span>
-              <strong id="tourneeFraisEconomie" style="color:#166534;">${economie.toFixed(2)} € (${pctEco} %)</strong>
-            </div>
-            <div style="display:flex;justify-content:space-between;padding:10px 0 0;border-top:2px solid #166534;margin-top:8px;">
-              <span style="color:#166534;font-weight:800;font-size:.95rem;">💵 À REMBOURSER AU BÉNÉVOLE</span>
-              <strong id="tourneeFraisARembourser" style="color:#166534;font-size:1.15rem;">${montant.toFixed(2)} €</strong>
+      const totalGlobal = resultats.reduce((s, r) => s + r.montant, 0);
+      msg += `
+          <div style="padding:10px;background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;margin-top:8px;">
+            <div style="display:flex;justify-content:space-between;font-size:.95rem;">
+              <span style="color:#166534;font-weight:800;">💵 TOTAL À REMBOURSER</span>
+              <strong id="tourneeFraisTotalGlobal" style="color:#166534;font-size:1.15rem;">${totalGlobal.toFixed(2)} €</strong>
             </div>
           </div>
-
-          <div style="margin-top:8px;text-align:center;font-size:.75rem;color:#64748b;">
-            ✓ Vérification : somme des parts = ${sommeParts.toFixed(2)} €
-          </div>
-
-          ${problemes.length > 0 ? `
-            <div style="margin-top:10px;padding:8px;background:#fef2f2;border-radius:6px;font-size:.78rem;color:#991b1b;">
-              ⚠️ Problèmes :<br>${problemes.join('<br>')}
-            </div>
-          ` : ''}
-        </div>
       `;
+
+      if (erreurs.length > 0) {
+        msg += `
+          <div style="margin-top:10px;padding:8px;background:#fef2f2;border-radius:6px;font-size:.78rem;color:#991b1b;">
+            ⚠️ Erreurs :<br>${erreurs.join('<br>')}
+          </div>
+        `;
       }
+      if (problemesGlobaux.length > 0) {
+        msg += `
+          <div style="margin-top:10px;padding:8px;background:#fef2f2;border-radius:6px;font-size:.78rem;color:#991b1b;">
+            ⚠️ Problèmes d'adresses :<br>${problemesGlobaux.join('<br>')}
+          </div>
+        `;
+      }
+
+      msg += `</div>`;
+
       if (statut) statut.innerHTML = msg;
 
       btn.textContent = '✅ Fermer';
