@@ -17,7 +17,7 @@ const Frais = {
   },
 
   getCoefficient() {
-    const p = Storage.getParametres();
+    const p = (typeof Parametres !== 'undefined' && Parametres.getParam) ? Parametres.getParam() : Storage.getParametres();
     const c = parseFloat(p.coefficientKm);
     return (isNaN(c) || c < 1) ? 1 : c;
   },
@@ -297,8 +297,8 @@ const Frais = {
     }
   },
 
-  async route(points) {
-    if (points.length < 2) return 0;
+  async routeDetail(points) {
+    if (points.length < 2) return { kmBrut: 0, kmApplique: 0, coef: 1, dureeMin: 0 };
     try {
       const coords = points.map(p => `${p[0]},${p[1]}`).join(';');
       const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=false`;
@@ -306,14 +306,21 @@ const Frais = {
       const data = await res.json();
       if (data && data.routes && data.routes[0]) {
         const kmBrut = data.routes[0].distance / 1000;
+        const dureeMin = Math.round((data.routes[0].duration || 0) / 60);
         const coef = this.getCoefficient();
-        return kmBrut * coef;
+        const kmApplique = kmBrut * coef;
+        return { kmBrut, kmApplique, coef, dureeMin };
       }
-      return 0;
+      return { kmBrut: 0, kmApplique: 0, coef: 1, dureeMin: 0 };
     } catch (e) {
       console.error('Route error:', e);
-      return 0;
+      return { kmBrut: 0, kmApplique: 0, coef: 1, dureeMin: 0 };
     }
+  },
+
+  async route(points) {
+    const det = await this.routeDetail(points);
+    return det.kmApplique;
   },
 
   async calculerDistances() {

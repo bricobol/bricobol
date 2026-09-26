@@ -291,7 +291,11 @@ const Tournee = {
 
       // 2) Calculer km et montant (async, donc on retourne une promesse)
       return (async () => {
-        const kmTotal = Math.round(await Frais.route(points));
+        const det = await Frais.routeDetail(points);
+        const kmTotal = Math.round(det.kmApplique);
+        const kmBrut = Math.round(det.kmBrut);
+        const coef = det.coef;
+        const dureeMin = det.dureeMin;
         if (kmTotal <= 0) return { ok: false, erreur: 'Trajet non calculable (km = 0)' };
 
         const montant = kmTotal * bareme;
@@ -327,6 +331,9 @@ const Tournee = {
         return {
           ok: true,
           kmTotal,
+          kmBrut,
+          coef,
+          dureeMin,
           montant,
           interventionsArr,
           totalKmInd,
@@ -341,7 +348,7 @@ const Tournee = {
 
   ouvrirCalculFrais(idOptionnel) {
     const jour = this.getJour();
-    if (jour.length === 0) {
+    if (jour.length === 0 && !idOptionnel) {
       alert('Aucune intervention prévue aujourd\'hui.');
       return;
     }
@@ -358,7 +365,7 @@ const Tournee = {
 
     // Si ouvert depuis une ligne, pré-remplir avec les bénévoles assignés
     if (idOptionnel) {
-      const inter = jour.find(x => x.id === idOptionnel);
+      const inter = jour.find(x => x.id === idOptionnel) || Interventions.getAll().find(x => String(x.id) === String(idOptionnel));
       if (inter) {
         this._fraisEtat.interventions = [inter.id];
         const liste = (typeof Storage !== 'undefined' && Storage.getBenevoles)
@@ -508,11 +515,23 @@ const Tournee = {
     if (typeof Frais !== 'undefined' && Frais.render) Frais.render();
   },
 
+  _listeInterventionsDispos() {
+    const list = this.getJour();
+    const etat = this._fraisEtat;
+    (etat.interventions || []).forEach(id => {
+      if (!list.find(x => x.id === id)) {
+        const inter = Interventions.getAll().find(x => x.id === id);
+        if (inter) list.push(inter);
+      }
+    });
+    return list;
+  },
+
   _rendreModaleCalcul() {
     const body = document.getElementById('tourneeFraisBody');
     if (!body) return;
 
-    const jour = this.getJour();
+    const jour = this._listeInterventionsDispos();
     const etat = this._fraisEtat;
 
     // Bénévoles disponibles (Bénévole + Aussi bénévole)
@@ -868,6 +887,9 @@ const Tournee = {
           numero: deplacement.numero,
           deplacementId: deplacement.id,
           kmTotal: res.kmTotal,
+          kmBrut: res.kmBrut,
+          coef: res.coef,
+          dureeMin: res.dureeMin,
           montant: res.montant,
           interventionsArr: res.interventionsArr,
           totalKmInd: res.totalKmInd,
@@ -931,6 +953,9 @@ const Tournee = {
                 <span>× ${bareme.toFixed(2)} € =</span>
                 <strong id="tourneeFraisMontant_${resultats.indexOf(r)}">${r.montant.toFixed(2)} €</strong>
               </div>
+            </div>
+            <div style="font-size:.72rem;color:#64748b;margin-top:4px;padding:4px 6px;background:#f8fafc;border-radius:4px;">
+              📐 Calcul brut : ${r.kmBrut} km · appliqué ×${r.coef} = <strong>${r.kmTotal} km</strong>${r.dureeMin ? ' · ⏱️ ≈ ' + r.dureeMin + ' min' : ''}
             </div>
             ${!estUne ? `
               <div style="margin-top:8px;padding:8px;background:#eff6ff;border-radius:6px;font-size:.78rem;">

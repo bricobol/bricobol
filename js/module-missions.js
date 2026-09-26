@@ -367,6 +367,7 @@ const Missions = {
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
             ${boutonPrincipal}
+            <button class="btn" style="padding:8px 12px;font-size:.82rem;background:#0ea5e9;" onclick="event.stopPropagation();Missions.ouvrirCalculFrais(${i.id})" title="Calculer les frais">🚗</button>
             <button class="btn btn-ghost" style="padding:8px 12px;font-size:.82rem;" onclick="Missions.openDetail(${i.id})">👁️ Fiche</button>
           </div>
         </div>
@@ -607,10 +608,19 @@ const Missions = {
 
       setStatut('🚗 Calcul du trajet…');
       await new Promise(r => setTimeout(r, 200));
-      const kmAuto = Math.round(await Frais.route([coordsDep, coordsArr, coordsDep]));
+      const det = await Frais.routeDetail([coordsDep, coordsArr, coordsDep]);
+      const kmAuto = Math.round(det.kmApplique);
+      const kmBrut = Math.round(det.kmBrut);
+      const coef = det.coef;
+      const dureeMin = det.dureeMin;
       if (kmAuto <= 0) { setStatut('❌ Trajet non calculable', '#dc2626'); return; }
 
       document.getElementById('missionsValiderKmAuto').value = kmAuto;
+
+      const detailEl = document.getElementById('missionsValiderKmDetail');
+      if (detailEl) {
+        detailEl.innerHTML = `📐 Calcul brut : <strong>${kmBrut} km</strong> · appliqué ×${coef} = <strong>${kmAuto} km</strong>${dureeMin ? ' · ⏱️ ≈ ' + dureeMin + ' min' : ''}`;
+      }
 
       const kmDeclares = (i.kmDeclares !== null && i.kmDeclares !== undefined) ? i.kmDeclares : null;
       if (kmDeclares !== null) {
@@ -678,10 +688,6 @@ const Missions = {
 
     if (kmChoisi < 0 || isNaN(kmChoisi)) { alert('Km invalide.'); return; }
 
-    const bareme = (typeof Frais !== 'undefined' && Frais.getBareme) ? Frais.getBareme() : 0.40;
-    const montant = kmChoisi * bareme;
-    const creerRemb = document.getElementById('missionsValiderCreerRemb').checked;
-
     const list = this.getAll();
     const idx = list.findIndex(x => x.id === id);
     if (idx === -1) return;
@@ -690,63 +696,8 @@ const Missions = {
     list[idx].valideeLe = new Date().toISOString();
     list[idx].kmValides = kmChoisi;
 
-    let deplacementId = null;
-    let comptaPiece = null;
-
-    if (creerRemb && kmChoisi > 0) {
-      const depsList = Storage.getDeplacements();
-      const n = depsList.length + 1;
-      const numero = 'DEP-' + String(n).padStart(3, '0');
-
-      deplacementId = Date.now() + Math.random();
-
-      const deplacement = {
-        id: deplacementId,
-        numero: numero,
-        date: Utils.todayISO(),
-        benevole: i.benevole,
-        km: kmChoisi,
-        trajet: `Domicile → ${i.numero} → Retour`,
-        motif: `Mission ${i.numero} · ${i.demandeur || ''}`,
-        notes: '',
-        rembourse: false,
-        montant: montant,
-        bareme: bareme,
-        interventions: [{ numero: i.numero, kmIndividuel: kmChoisi, part: montant }]
-      };
-      depsList.push(deplacement);
-      Storage.saveDeplacements(depsList);
-
-      const comptaList = (typeof Compta !== 'undefined') ? Compta.getAll() : Storage.getEntries();
-      const comptaId = Date.now() + Math.random();
-      const pieceCount = comptaList.filter(e => e.type === 'depense').length + 1;
-      comptaPiece = 'DEP-' + String(pieceCount).padStart(3, '0');
-
-      const entry = {
-        id: comptaId,
-        type: 'depense',
-        date: Utils.todayISO(),
-        piece: comptaPiece,
-        yapla: '-',
-        tiers: i.benevole,
-        intervention: i.numero,
-        paiement: 'Espèces',
-        items: [{ name: '🚗 Remboursement frais de route', amount: montant, category: 'variable' }],
-        total: montant,
-        source: 'frais-remboursement',
-        notes: `Mission ${i.numero}`
-      };
-      comptaList.push(entry);
-      if (typeof Compta !== 'undefined') Compta.saveAll(comptaList);
-      else Storage.saveEntries(comptaList);
-
-      list[idx].deplacementId = deplacementId;
-    }
-
     Interventions.saveAll(list);
 
-    if (typeof Frais !== 'undefined' && Frais.render) Frais.render();
-    if (typeof Compta !== 'undefined' && Compta.render) Compta.render();
     if (typeof Tournee !== 'undefined' && Tournee.render) Tournee.render();
     if (typeof Dashboard !== 'undefined' && Dashboard.render) Dashboard.render();
     this.render();
@@ -754,11 +705,18 @@ const Missions = {
 
     this.fermerValiderModal();
 
-    if (creerRemb && kmChoisi > 0) {
-      alert(`✅ Mission validée.\n\n💰 Déplacement créé : DEP-XXX\n📏 ${kmChoisi} km × ${bareme.toFixed(2)} € = ${montant.toFixed(2)} €\n📄 Écriture compta : ${comptaPiece}`);
-    } else {
-      alert('✅ Mission validée (sans remboursement).');
+    // Chercher si un deplacement existe deja pour cette intervention
+    const depsExistants = (typeof Frais !== 'undefined' && Frais.getAll)
+      ? Frais.getAll().filter(d => (d.interventions || []).some(it => it.numero === i.numero))
+      : [];
+
+    let msg = `✅ Mission validée.\\n\\n📏 Km validés : ${kmChoisi} km`;
+    if (depsExistants.length > 0) {
+      msg += `\\n\\n🚗 Déplacement(s) déjà créé(s) : ${depsExistants.map(d => d.numero).join(', ')}`;
+    } else if (kmChoisi > 0) {
+      msg += '\\n\\n💡 Pensez à créer les frais avec le bouton 🚗 (Missions).';
     }
+    alert(msg);
   },
 
   // ---------- Vue ----------
@@ -1165,6 +1123,7 @@ const Missions = {
                   <strong><input type="text" id="missionsValiderKmAuto" readonly style="border:none;background:transparent;text-align:right;font-weight:800;color:#1e40af;width:80px;"></strong>
                 </div>
                 <div id="missionsValiderEcart"></div>
+                <div id="missionsValiderKmDetail" style="font-size:.75rem;color:#64748b;margin-top:6px;padding:6px 8px;background:#f8fafc;border-radius:6px;"></div>
 
                 <div style="margin-top:12px;padding-top:12px;border-top:1px dashed #bfdbfe;">
                   <label style="display:flex;align-items:center;gap:10px;padding:8px;background:#fff;border-radius:8px;cursor:pointer;margin-bottom:6px;">
@@ -1190,12 +1149,12 @@ const Missions = {
                 </div>
               </div>
 
-              <div class="form-group" style="padding:12px;background:#fffbeb;border:1px solid #fcd34d;border-radius:10px;">
-                <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;margin:0;">
-                  <input type="checkbox" id="missionsValiderCreerRemb" checked style="width:auto;margin-top:3px;">
-                  <span style="font-size:.88rem;">
-                    <strong>💶 Créer le remboursement</strong><br>
-                    <small style="color:var(--text-light);">Un déplacement sera créé dans le module Frais et une écriture compta (dépense) sera ajoutée.</small>
+              <div class="form-group" style="padding:12px;background:#f0f9ff;border:1px solid #bfdbfe;border-radius:10px;">
+                <label style="display:flex;align-items:flex-start;gap:10px;margin:0;">
+                  <span style="font-size:1.2rem;">💡</span>
+                  <span style="font-size:.85rem;color:#1e40af;">
+                    <strong>Les frais se créent via 🚗</strong><br>
+                    <small>Utilisez le bouton 🚗 sur la carte de l\'intervention (dans Missions → Toutes, Aujourd\'hui, En cours ou À valider) pour créer les déplacements et remboursements.</small>
                   </span>
                 </label>
               </div>
