@@ -1111,7 +1111,7 @@ const Missions = {
 
               <div class="form-group">
                 <label>📏 Kilométrage réel (optionnel)</label>
-                <input type="number" step="1" min="0" id="missionsTerminerKm" placeholder="Ex : 38 (optionnel)" style="padding:10px;border:1px solid var(--border);border-radius:8px;font-size:.92rem;width:100%;">
+                <input type="number" step="0.1" min="0" id="missionsTerminerKm" placeholder="Ex : 38 (optionnel)" style="padding:10px;border:1px solid var(--border);border-radius:8px;font-size:.92rem;width:100%;">
                 <small style="color:var(--text-light);font-size:.75rem;">Laissez vide si vous ne connaissez pas le km exact — l'app calculera automatiquement.</small>
               </div>
 
@@ -1178,7 +1178,7 @@ const Missions = {
                     <input type="radio" name="missionsValiderChoixKm" id="missionsValiderRadioManuel" onchange="Missions._toggleKmManuel()" style="width:auto;">
                     <span style="font-size:.85rem;">✏️ Saisir un km manuel</span>
                   </label>
-                  <input type="number" step="1" min="0" id="missionsValiderKmManuel" oninput="Missions._updateMontantValider()" disabled placeholder="Ex : 38" style="margin-top:6px;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:.88rem;width:100%;">
+                  <input type="number" step="0.1" min="0" id="missionsValiderKmManuel" oninput="Missions._updateMontantValider()" disabled placeholder="Ex : 38" style="margin-top:6px;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:.88rem;width:100%;">
                 </div>
 
                 <div id="missionsValiderCalcStatut" style="margin-top:8px;"></div>

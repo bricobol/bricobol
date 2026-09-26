@@ -65,11 +65,38 @@ const Frais = {
     container.innerHTML = list.map(f => this.renderCard(f)).join('');
   },
 
+  _trajetDetaille(f) {
+    const inter = f.interventions || [];
+    if (inter.length > 0 && typeof inter[0] === 'object' && inter[0].numero) {
+      const morceaux = inter.map(r => {
+        let s = Utils.escapeHtml(r.numero);
+        let nom = r.nom;
+        let type = r.type;
+        // Fallback : chercher dans les interventions actuelles si manquant
+        if ((!nom || !type) && typeof Interventions !== 'undefined') {
+          const info = Interventions.getAll().find(x => x.numero === r.numero);
+          if (info) {
+            if (!nom) nom = info.demandeur;
+            if (!type) type = info.type;
+          }
+        }
+        const details = [];
+        if (nom) details.push(Utils.escapeHtml(nom));
+        if (type) details.push(Utils.escapeHtml(type));
+        if (details.length > 0) s += ' (' + details.join(' · ') + ')';
+        return s;
+      });
+      return 'Domicile → ' + morceaux.join(' → ') + ' → Domicile';
+    }
+    return Utils.escapeHtml(f.trajet || '—');
+  },
+
   renderCard(f) {
     const statut = f.rembourse ? 'success' : 'warning';
     const badge = f.rembourse ? '<span class="badge badge-success">Remboursé</span>' : '<span class="badge badge-warning">À rembourser</span>';
     const nbInter = (f.interventions || []).length;
-    const infoInter = nbInter > 0 ? ` · <strong>${nbInter} intervention${nbInter > 1 ? 's' : ''}</strong> (prorata)` : '';
+    const infoInter = nbInter > 0 ? ` · <strong>${nbInter} intervention${nbInter > 1 ? 's' : ''}</strong>${nbInter > 1 ? ' (prorata)' : ''}` : '';
+    const trajetAffiche = this._trajetDetaille(f);
     return `
       <div class="adh-card statut-${statut}" onclick="Frais.openDetail(${f.id})">
         <div class="adh-card-info">
@@ -78,7 +105,7 @@ const Frais = {
             ${Utils.escapeHtml(f.benevole)} — ${f.km} km
           </div>
           <div class="adh-card-details">
-            📅 ${Utils.formatDate(f.date)} · 🚗 ${Utils.escapeHtml(f.trajet || '—')}<br>
+            📅 ${Utils.formatDate(f.date)} · 🚗 ${trajetAffiche}<br>
             💶 <strong>${(f.montant || 0).toFixed(2)} €</strong>${infoInter}<br>
             ${badge} ${f.motif ? '· ' + Utils.escapeHtml(f.motif) : ''}
             ${f.comptaPiece ? ' · 💰 ' + Utils.escapeHtml(f.comptaPiece) : ''}
@@ -172,7 +199,7 @@ const Frais = {
       html += `
         <div style="display:grid;grid-template-columns:1fr 100px 90px;gap:8px;align-items:center;padding:8px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;background:var(--bg-alt);">
           <div style="font-size:.82rem;font-weight:600;">${Utils.escapeHtml(r.numero)}</div>
-          <input type="number" step="1" min="0" placeholder="km seul" value="${r.kmIndividuel || ''}" oninput="Frais.setKmIndividuel(${i}, this.value)" style="padding:6px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;">
+          <input type="number" step="0.1" min="0" placeholder="km seul" value="${r.kmIndividuel || ''}" oninput="Frais.setKmIndividuel(${i}, this.value)" style="padding:6px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;">
           <div id="fraisPart_${i}" style="text-align:right;font-weight:700;font-size:.88rem;color:var(--accent);">${(r.part || 0).toFixed(2)} €</div>
         </div>`;
     });
@@ -848,7 +875,7 @@ const Frais = {
 
               <div class="form-group">
                 <label>Distance totale de la tournée (km) * <small style="color:var(--text-light);font-weight:400;">— compteur réel ou calcul auto</small></label>
-                <input type="number" step="1" id="fraisKm" placeholder="Ex : 60" oninput="Frais.updateMontant()" required>
+                <input type="number" step="0.1" min="0" id="fraisKm" placeholder="Ex : 12.3" oninput="Frais.updateMontant()" required>
               </div>
               <div style="font-size:.8rem;color:var(--text-light);margin-top:-8px;margin-bottom:12px;">Barème : <span id="fraisBaremeAffiche">0.40</span> €/km</div>
 
