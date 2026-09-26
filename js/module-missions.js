@@ -266,8 +266,9 @@ const Missions = {
     const heure = i.heurePrevue ? `⏰ ${Utils.escapeHtml(i.heurePrevue)}` : '⏰ (heure libre)';
     const dateAffichee = i.datePrevue !== Utils.todayISO() ? `📅 ${Utils.formatDate(i.datePrevue)} · ` : '';
     const statutInfo = (Interventions.STATUTS[i.statut] || { label: i.statut, badge: 'badge-neutral' });
-    const benev = i.benevole ? `🤝 ${Utils.escapeHtml(i.benevole)}` : '<em style="color:var(--text-light);">Pas de bénévole</em>';
-    const benev2 = i.benevole2 ? ` · 🤝 ${Utils.escapeHtml(i.benevole2)}` : '';
+    const benevListe = (typeof Storage !== 'undefined' && Storage.getBenevoles) ? Storage.getBenevoles(i) : [];
+    const benev = benevListe.length > 0 ? benevListe.map(b => `🤝 ${Utils.escapeHtml(b)}`).join(' · ') : '<em style="color:var(--text-light);">Pas de bénévole</em>';
+    const benev2 = '';
     const relance = (afficherRelance && i.aRelancer)
       ? `<div style="margin-top:6px;padding:6px 10px;background:#fef3c7;border-radius:6px;font-size:.78rem;color:#92400e;">
           🔔 <strong>${Utils.escapeHtml(i.aRelancer.quoi || 'À relancer')}</strong>
@@ -317,10 +318,10 @@ const Missions = {
       if (i.heurePrevue) dateStr += ` · ⏰ ${Utils.escapeHtml(i.heurePrevue)}`;
     }
 
+    const benevListe = (typeof Storage !== 'undefined' && Storage.getBenevoles) ? Storage.getBenevoles(i) : [];
     let benevStr = '<em style="color:var(--text-light);">Non assigné</em>';
-    if (i.benevole) {
-      benevStr = `🤝 ${Utils.escapeHtml(i.benevole)}`;
-      if (i.benevole2) benevStr += ` · 🤝 ${Utils.escapeHtml(i.benevole2)}`;
+    if (benevListe.length > 0) {
+      benevStr = benevListe.map(b => `🤝 ${Utils.escapeHtml(b)}`).join(' · ');
     }
 
     let boutonPrincipal = '';

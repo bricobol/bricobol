@@ -105,7 +105,8 @@ const Interventions = {
   renderCard(i) {
     const st = this.STATUTS[i.statut] || this.STATUTS.demande;
     const prio = i.priorite === 'urgente' ? ' · <span class="badge badge-danger">Urgent</span>' : '';
-    const benev = i.benevole ? `👤 ${Utils.escapeHtml(i.benevole)}` : '<em style="color:var(--text-light);">Non assigné</em>';
+    const benevListe = (typeof Storage !== 'undefined' && Storage.getBenevoles) ? Storage.getBenevoles(i) : [];
+    const benev = benevListe.length > 0 ? benevListe.map(b => `👤 ${Utils.escapeHtml(b)}`).join(' · ') : '<em style="color:var(--text-light);">Non assigné</em>';
     const dateP = i.datePrevue
       ? `📅 ${Utils.formatDate(i.datePrevue)}${i.heurePrevue ? ' à ' + Utils.escapeHtml(i.heurePrevue) : ''}`
       : '';
@@ -278,6 +279,7 @@ const Interventions = {
   openDetail(id) {
     const i = this.getAll().find(x => x.id === id);
     if (!i) return;
+    const benevListe = (typeof Storage !== 'undefined' && Storage.getBenevoles) ? Storage.getBenevoles(i) : [];
     const st = this.STATUTS[i.statut] || this.STATUTS.demande;
     const prio = i.priorite === 'urgente' ? '<span class="badge badge-danger">Urgent</span>' : '';
     const autres = this.getAll().filter(x => x.id !== i.id && x.demandeur.toLowerCase() === i.demandeur.toLowerCase());
@@ -365,7 +367,7 @@ const Interventions = {
       <div class="adh-detail-section"><h4>Description</h4><p style="white-space:pre-wrap;">${Utils.escapeHtml(i.description)}</p></div>
       <div class="adh-detail-section">
         <h4>Assignation</h4>
-        <p>Bénévole : ${i.benevole ? Utils.escapeHtml(i.benevole) : '<em>Non assigné</em>'}${i.benevole ? ` <button class="btn" style="padding:2px 8px;font-size:.75rem;background:var(--info);margin-left:6px;" onclick="Interventions.messageContact('${Utils.escapeHtml(i.benevole)}', Interventions._interventionCourante)" title="Envoyer un message">✉️</button>` : ''}</p>
+        <p>Bénévole${benevListe.length > 1 ? 's' : ''} : ${benevListe.length > 0 ? benevListe.map(b => Utils.escapeHtml(b)).join(' · ') : '<em>Non assigné</em>'}${benevListe.length > 0 ? ` <button class="btn" style="padding:2px 8px;font-size:.75rem;background:var(--info);margin-left:6px;" onclick="Interventions.messageContact('${Utils.escapeHtml(benevListe[0])}', Interventions._interventionCourante)" title="Envoyer un message">✉️</button>` : ''}</p>
         ${datePrevueAffiche ? `<p>${datePrevueAffiche}</p>` : ''}
         ${dateRealiseeAffiche ? `<p>${dateRealiseeAffiche}</p>` : ''}
       </div>

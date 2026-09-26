@@ -41,7 +41,6 @@ const Storage = {
       updated_at: 'updatedAt'
     },
     interventions: {
-      benevoles: 'benevoles',
       date_creation: 'dateCreation',
       date_prevue: 'datePrevue',
       heure_prevue: 'heurePrevue',
