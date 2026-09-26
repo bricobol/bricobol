@@ -112,6 +112,7 @@ const Parametres = {
       interetGeneral: !!p.interetGeneral,
       emettreRecusDefaut: !!p.emettreRecusDefaut,
       baremeKm: p.baremeKm || 0.40,
+      coefficientKm: p.coefficientKm || 1.15,
       cotisationAnnuelle: p.cotisationAnnuelle || 10,
       cotisationBenevoleSuggeree: p.cotisationBenevoleSuggeree || 5,
       seuilMecene: p.seuilMecene || 200,
@@ -227,6 +228,8 @@ const Parametres = {
 
     // Onglet Divers
     set('paramBareme', p.baremeKm);
+    set('paramCoefficientKm', p.coefficientKm);
+    this.majExempleCoefficient(p.coefficientKm);
     set('paramExercice', p.exerciceCourant);
 
     // Sous-listes
@@ -241,6 +244,24 @@ const Parametres = {
 
     // Appliquer l'onglet courant
     this.setTab(this.currentTab);
+  },
+
+  majExempleCoefficient(val) {
+    const el = document.getElementById('paramCoefficientExemple');
+    if (!el) return;
+    const coef = parseFloat(val);
+    if (isNaN(coef) || coef < 1) {
+      el.innerHTML = 'Coefficient invalide (doit être ≥ 1)';
+      el.style.background = '#fef2f2';
+      el.style.color = '#991b1b';
+      return;
+    }
+    const kmTheorique = 12;
+    const kmApplique = (kmTheorique * coef).toFixed(1);
+    const pct = ((coef - 1) * 100).toFixed(0);
+    el.style.background = '#eff6ff';
+    el.style.color = '#1e40af';
+    el.innerHTML = `💡 Exemple : le calcul auto dit <strong>${kmTheorique} km</strong> → remboursé : <strong>${kmApplique} km</strong> (+${pct}%)`;
   },
 
   togglePaieCB() { const a = document.getElementById('paramPaieCBActif')?.checked; const b = document.getElementById('paramPaieCBBody'); if (b) b.style.display = a ? 'block' : 'none'; },
@@ -595,6 +616,7 @@ Cordialement,
 
     // Onglet Divers
     p.baremeKm = parseFloat(document.getElementById('paramBareme').value) || 0.40;
+    p.coefficientKm = parseFloat(document.getElementById('paramCoefficientKm').value) || 1.15;
     p.exerciceCourant = parseInt(document.getElementById('paramExercice').value) || new Date().getFullYear();
 
 
@@ -921,6 +943,8 @@ Cordialement,
               <h3 style="font-size:1rem;margin-bottom:14px;color:var(--primary);font-weight:700;">⚙️ Réglages métier</h3>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                 <div class="form-group"><label>Barème km (€/km)</label><input type="number" step="0.01" id="paramBareme"></div>
+                <div class="form-group"><label>Coefficient de sécurité km</label><input type="number" step="0.01" min="1" id="paramCoefficientKm" oninput="Parametres.majExempleCoefficient(this.value)"><small style="color:var(--text-light);font-size:.72rem;">Multiplie les km calculés automatiquement (ex : 1.15 = +15%)</small><div id="paramCoefficientExemple" style="margin-top:6px;padding:8px 10px;background:#eff6ff;border-radius:6px;font-size:.78rem;color:#1e40af;"></div></div>
+                <div class="form-group"><label>Coefficient de sécurité km</label><input type="number" step="0.01" min="1" id="paramCoefficientKm" oninput="Parametres.majExempleCoefficient(this.value)"><small style="color:var(--text-light);font-size:.72rem;">Multiplie les km calculés automatiquement (ex : 1.15 = +15%)</small><div id="paramCoefficientExemple" style="margin-top:6px;padding:8px 10px;background:#eff6ff;border-radius:6px;font-size:.78rem;color:#1e40af;"></div></div>
                 <div class="form-group"><label>Exercice courant</label><input type="number" id="paramExercice"></div>
               </div>
               <button type="submit" class="btn" style="width:100%;">💾 Enregistrer</button>

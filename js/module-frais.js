@@ -16,6 +16,12 @@ const Frais = {
     return p.baremeKm || this.BAREME_DEFAUT;
   },
 
+  getCoefficient() {
+    const p = Storage.getParametres();
+    const c = parseFloat(p.coefficientKm);
+    return (isNaN(c) || c < 1) ? 1 : c;
+  },
+
   nextNumero() {
     const n = this.getAll().length + 1;
     return 'DEP-' + String(n).padStart(3, '0');
@@ -299,7 +305,9 @@ const Frais = {
       const res = await fetch(url);
       const data = await res.json();
       if (data && data.routes && data.routes[0]) {
-        return data.routes[0].distance / 1000;
+        const kmBrut = data.routes[0].distance / 1000;
+        const coef = this.getCoefficient();
+        return kmBrut * coef;
       }
       return 0;
     } catch (e) {

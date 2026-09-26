@@ -997,6 +997,55 @@ const Tournee = {
 
   // ---------- Actions ✅📅🔔👤 ----------
 
+  _ajusterKmBenevole(idx, newKmStr) {
+    const resultats = this._derniersResultats;
+    if (!resultats || !resultats[idx]) { alert('Calcul introuvable.'); return; }
+
+    const newKm = parseFloat(newKmStr);
+    if (isNaN(newKm) || newKm <= 0) { alert('Km invalide.'); return; }
+
+    const r = resultats[idx];
+    const bareme = Frais.getBareme();
+    const nouveauMontant = newKm * bareme;
+
+    const ratioParts = r.interventionsArr.map(ri => {
+      const total = r.totalKmInd || 0;
+      return total > 0 ? (ri.kmIndividuel / total) : (1 / r.interventionsArr.length);
+    });
+    const nouvellesParts = ratioParts.map(ratio => ratio * nouveauMontant);
+
+    const deps = Storage.getDeplacements();
+    const dIdx = deps.findIndex(d => String(d.id) === String(r.deplacementId));
+    if (dIdx !== -1) {
+      deps[dIdx].km = newKm;
+      deps[dIdx].montant = nouveauMontant;
+      deps[dIdx].interventions = r.interventionsArr.map((ri, i) => ({
+        numero: ri.numero,
+        nom: ri.nom,
+        type: ri.type,
+        kmIndividuel: ri.kmIndividuel,
+        part: nouvellesParts[i]
+      }));
+      Storage.saveDeplacements(deps);
+    }
+
+    r.kmTotal = newKm;
+    r.montant = nouveauMontant;
+    r.interventionsArr = r.interventionsArr.map((ri, i) => ({
+      ...ri,
+      part: nouvellesParts[i]
+    }));
+
+    const elMontant = document.getElementById('tourneeFraisMontant_' + idx);
+    if (elMontant) elMontant.textContent = nouveauMontant.toFixed(2) + ' €';
+
+    const totalGlobal = resultats.reduce((s, x) => s + x.montant, 0);
+    const elTotal = document.getElementById('tourneeFraisTotalGlobal');
+    if (elTotal) elTotal.textContent = totalGlobal.toFixed(2) + ' €';
+
+    if (typeof Frais !== 'undefined' && Frais.render) Frais.render();
+  },
+
   openFaitModal(id) {
     const i = this.getAll().find(x => x.id === id);
     if (!i) return;
