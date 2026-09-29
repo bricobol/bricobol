@@ -276,6 +276,18 @@ const Interventions = {
     BricoBol.updateStorageInfo();
   },
 
+  assignerBenevoles(id) {
+    if (typeof Missions === 'undefined' || typeof Missions.openAssignerModal !== 'function') {
+      alert('Module Missions indisponible.');
+      return;
+    }
+    if (typeof BricoBol !== 'undefined' && BricoBol.ensureModuleMounted) {
+      BricoBol.ensureModuleMounted('missions');
+    }
+    Missions.openAssignerModal(id);
+    if (Interventions.closeDetail) Interventions.closeDetail();
+  },
+
   openDetail(id) {
     const i = this.getAll().find(x => x.id === id);
     if (!i) return;
@@ -376,6 +388,7 @@ const Interventions = {
       <div class="adh-detail-actions">
         ${boutonDon}
         <button class="btn btn-secondary" onclick="Interventions.closeDetail();Interventions.openForm(${i.id});">✏️ Modifier</button>
+        <button class="btn" style="background:#f97316;" onclick="Interventions.assignerBenevoles(${i.id})">👤 Assigner</button>
         ${i.statut !== 'terminee' ? `<button class="btn btn-success" onclick="Interventions.changerStatut(${i.id}, 'terminee')">✅ Terminée</button>` : ''}
         ${i.statut === 'demande' ? `<button class="btn" style="background:var(--warning);" onclick="Interventions.changerStatut(${i.id}, 'planifiee')">📅 Planifier</button>` : ''}
         ${i.statut === 'planifiee' ? `<button class="btn" style="background:var(--accent);" onclick="Interventions.changerStatut(${i.id}, 'en_cours')">▶️ Démarrer</button>` : ''}
