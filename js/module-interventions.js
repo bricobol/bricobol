@@ -717,7 +717,7 @@ const Interventions = {
         const sel = document.getElementById("intFilterStatut");
         if (sel) { sel.value = params.statut; }
         this.render();
-      }, 80);
+      }, 250);
     }
     this.render();
   },

@@ -210,7 +210,7 @@ const Dashboard = {
     // Frais a creer (interventions terminees sans deplacement)
     if (typeof Interventions !== "undefined" && Interventions.getAll) {
       const sansFrais = Interventions.getAll().filter(i =>
-        (i.statut === "terminee" || i.statut === "validee") && !i.deplacementId
+        (i.statut === "terminee" || i.statut === "validee") && !Interventions.getFraisForIntervention(i.numero)
       );
       if (sansFrais.length > 0) {
         alertes.push({
