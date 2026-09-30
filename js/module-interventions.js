@@ -118,7 +118,7 @@ const Interventions = {
     let fraisInline = '';
     if (frais && frais.part > 0) {
       fraisInline = `<div style="margin-top:6px;padding:6px 8px;background:#fef3c7;border-radius:6px;font-size:.78rem;">
-        💶 <strong>${frais.part.toFixed(2)} €</strong>
+        🚗 <strong>${frais.part.toFixed(2)} €</strong>
         ${frais.economie > 0 ? ` · 💰 Économie : ${frais.economie.toFixed(2)} €` : ''}
       </div>`;
     }
