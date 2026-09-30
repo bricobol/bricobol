@@ -57,6 +57,7 @@ const Storage = {
       remarque_benevole: 'remarqueBenevole',
       validee_le: 'valideeLe',
       deplacement_id: 'deplacementId',
+      sans_frais: "sansFrais",
       updated_at: 'updatedAt'
     },
     deplacements: {

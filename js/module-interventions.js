@@ -279,6 +279,19 @@ const Interventions = {
     BricoBol.updateStorageInfo();
   },
 
+  toggleSansFrais(id) {
+    const list = this.getAll();
+    const i = list.find(x => x.id === id);
+    if (!i) return;
+    i.sansFrais = !i.sansFrais;
+    if (typeof Storage !== "undefined" && Storage.save) {
+      Storage.saveInterventions(list);
+    }
+    this.closeDetail();
+    this.openDetail(id);
+    this.render();
+  },
+
   assignerBenevoles(id) {
     if (typeof Missions === 'undefined' || typeof Missions.openAssignerModal !== 'function') {
       alert('Module Missions indisponible.');
@@ -392,6 +405,7 @@ const Interventions = {
         ${boutonDon}
         <button class="btn btn-secondary" onclick="Interventions.closeDetail();Interventions.openForm(${i.id});">✏️ Modifier</button>
         <button class="btn" style="background:#f97316;" onclick="Interventions.assignerBenevoles(${i.id})">👤 Assigner</button>
+        ${((i.statut === "terminee" || i.statut === "validee") && !i.deplacementId) ? `<button class="btn" style="background:${i.sansFrais ? "#16a34a" : "#64748b"};" onclick="Interventions.toggleSansFrais(${i.id})">${i.sansFrais ? "↩️ Remettre frais" : "🚫 Pas de frais"}</button>` : ""}
         ${i.statut !== 'terminee' ? `<button class="btn btn-success" onclick="Interventions.changerStatut(${i.id}, 'terminee')">✅ Terminée</button>` : ''}
         ${i.statut === 'demande' ? `<button class="btn" style="background:var(--warning);" onclick="Interventions.changerStatut(${i.id}, 'planifiee')">📅 Planifier</button>` : ''}
         ${i.statut === 'planifiee' ? `<button class="btn" style="background:var(--accent);" onclick="Interventions.changerStatut(${i.id}, 'en_cours')">▶️ Démarrer</button>` : ''}
