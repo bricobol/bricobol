@@ -422,8 +422,7 @@ const Frais = {
 
     const pointsTournee = [coordsDepart, ...arrets.filter(Boolean), coordsDepart];
     setStatut('🚗 Calcul de l\'itinéraire complet...', 'var(--accent)');
-    const detTournee = await this.routeDetail(pointsTournee);
-    const kmTotal = Math.round(detTournee.kmApplique);
+    const kmTotal = Math.round(await this.route(pointsTournee));
 
     for (let i = 0; i < arrets.length; i++) {
       if (!arrets[i]) { this.repartitionTemp[i].kmIndividuel = 0; continue; }
@@ -434,8 +433,6 @@ const Frais = {
     }
 
     document.getElementById('fraisKm').value = kmTotal;
-    const _kmd = document.getElementById("fraisKmDetail");
-    if (_kmd && detTournee) _kmd.textContent = "📐 Calcul brut : " + detTournee.kmBrut.toFixed(1) + " km · appliqué ×" + detTournee.coef.toFixed(2) + " = " + detTournee.kmApplique.toFixed(1) + " km · ⏱️ ≈ " + detTournee.dureeMin + " min";
     if (!document.getElementById('fraisTrajet').value) {
       document.getElementById('fraisTrajet').value = 'Départ → ' + this.repartitionTemp.map(r => r.numero).join(' → ') + ' → Retour';
     }
@@ -896,7 +893,6 @@ const Frais = {
                 <input type="number" step="0.1" min="0" id="fraisKm" placeholder="Ex : 12.3" oninput="Frais.updateMontant()" required>
               </div>
               <div style="font-size:.8rem;color:var(--text-light);margin-top:-8px;margin-bottom:12px;">Barème : <span id="fraisBaremeAffiche">0.40</span> €/km</div>
-              <div id="fraisKmDetail" style="font-size:.8rem;color:#0ea5e9;margin-top:-4px;margin-bottom:12px;"></div>
 
               <div class="form-group"><label>Trajet</label><input type="text" id="fraisTrajet" placeholder="Ex : Saint-Saud → A → B → C → Saint-Saud"></div>
               <div class="form-group"><label>Motif</label><input type="text" id="fraisMotif" placeholder="Ex : Tournée groupée 3 interventions"></div>
