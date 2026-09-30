@@ -112,6 +112,7 @@ const Interventions = {
       : '';
 
     const frais = this.getFraisForIntervention(i.numero);
+    const badgeFrais = ((i.statut === "terminee" || i.statut === "validee") && !i.deplacementId && !i.sansFrais) ? "<div style=\"margin-top:6px;padding:6px 8px;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;font-size:.78rem;color:#ea580c;font-weight:700;\">⚠️ Frais à créer</div>" : "";
     let fraisInline = '';
     if (frais && frais.part > 0) {
       fraisInline = `<div style="margin-top:6px;padding:6px 8px;background:#fef3c7;border-radius:6px;font-size:.78rem;">
@@ -140,7 +141,7 @@ const Interventions = {
             <span class="badge ${st.badge}">${st.label}</span>
             <span style="color:var(--text-light);">· ${Utils.escapeHtml((i.description || '').substring(0, 50))}${i.description && i.description.length > 50 ? '…' : ''}</span>
           </div>
-          ${fraisInline}${donsInline}
+          ${fraisInline}${donsInline}${badgeFrais}
         </div>
         <div class="adh-card-actions">
           <button class="adh-btn-edit" onclick="event.stopPropagation();Interventions.openForm(${i.id})">✏️</button>
