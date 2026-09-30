@@ -284,7 +284,7 @@ const Interventions = {
     const i = list.find(x => x.id === id);
     if (!i) return;
     i.sansFrais = !i.sansFrais;
-    if (typeof Storage !== "undefined" && Storage.save) {
+    if (typeof Storage !== "undefined") {
       Storage.saveInterventions(list);
     }
     this.closeDetail();
@@ -600,6 +600,7 @@ const Interventions = {
               <option value="🍎 Cueillette solidaire">🍎 Cueillette solidaire</option>
               <option value="Autre">Autre</option>
             </select>
+            <select id="intFilterStatut" onchange="Interventions.render()" style="padding:9px;border:1px solid var(--border);border-radius:8px;font-size:.88rem;">
               <option value="">Tous statuts</option>
               <option value="demande">Demandes</option>
               <option value="planifiee">Planifiées</option>
@@ -608,6 +609,7 @@ const Interventions = {
               <option value="annulee">Annulées</option>
               <option value="sans_frais">🚗 Frais à créer</option>
             </select>
+          </div>
           <div style="margin-top:10px;font-size:.82rem;color:var(--text-light);" id="intCount">0 intervention</div>
         </div>
         <div id="interventionsListContainer"></div>
