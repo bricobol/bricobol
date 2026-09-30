@@ -70,7 +70,7 @@ const Interventions = {
       }
       if (type && i.type !== type) return false;
       if (statut === "sans_frais") {
-        if (!((i.statut === "terminee" || i.statut === "validee") && !i.deplacementId && !i.sansFrais)) return false;
+        if (!((i.statut === "terminee" || i.statut === "validee") && !this.getFraisForIntervention(i.numero) && !i.sansFrais)) return false;
       } else if (statut && i.statut !== statut) return false;
       return true;
     });
@@ -114,7 +114,7 @@ const Interventions = {
       : '';
 
     const frais = this.getFraisForIntervention(i.numero);
-    const badgeFrais = ((i.statut === "terminee" || i.statut === "validee") && !i.deplacementId && !i.sansFrais) ? "<div style=\"margin-top:6px;padding:6px 8px;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;font-size:.78rem;color:#ea580c;font-weight:700;\">⚠️ Frais à créer</div>" : "";
+    const badgeFrais = ((i.statut === "terminee" || i.statut === "validee") && !frais && !i.sansFrais) ? "<div style=\"margin-top:6px;padding:6px 8px;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;font-size:.78rem;color:#ea580c;font-weight:700;\">⚠️ Frais à créer</div>" : "";
     let fraisInline = '';
     if (frais && frais.part > 0) {
       fraisInline = `<div style="margin-top:6px;padding:6px 8px;background:#fef3c7;border-radius:6px;font-size:.78rem;">
@@ -405,7 +405,7 @@ const Interventions = {
         ${boutonDon}
         <button class="btn btn-secondary" onclick="Interventions.closeDetail();Interventions.openForm(${i.id});">✏️ Modifier</button>
         <button class="btn" style="background:#f97316;" onclick="Interventions.assignerBenevoles(${i.id})">👤 Assigner</button>
-        ${((i.statut === "terminee" || i.statut === "validee") && !i.deplacementId) ? `<button class="btn" style="background:${i.sansFrais ? "#16a34a" : "#64748b"};" onclick="Interventions.toggleSansFrais(${i.id})">${i.sansFrais ? "↩️ Remettre frais" : "🚫 Pas de frais"}</button>` : ""}
+        ${((i.statut === "terminee" || i.statut === "validee") && !this.getFraisForIntervention(i.numero)) ? `<button class="btn" style="background:${i.sansFrais ? "#16a34a" : "#64748b"};" onclick="Interventions.toggleSansFrais(${i.id})">${i.sansFrais ? "↩️ Remettre frais" : "🚫 Pas de frais"}</button>` : ""}
         ${i.statut !== 'terminee' ? `<button class="btn btn-success" onclick="Interventions.changerStatut(${i.id}, 'terminee')">✅ Terminée</button>` : ''}
         ${i.statut === 'demande' ? `<button class="btn" style="background:var(--warning);" onclick="Interventions.changerStatut(${i.id}, 'planifiee')">📅 Planifier</button>` : ''}
         ${i.statut === 'planifiee' ? `<button class="btn" style="background:var(--accent);" onclick="Interventions.changerStatut(${i.id}, 'en_cours')">▶️ Démarrer</button>` : ''}
