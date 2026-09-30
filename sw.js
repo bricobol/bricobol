@@ -3,7 +3,7 @@
 // Cache l'app pour hors-ligne + mises à jour auto
 // ============================================================
 
-const CACHE = 'bricobol-v24';
+const CACHE = 'bricobol-v25';
 const ASSETS = [
   '/', '/bricobol/',
   '/bricobol/index.html',

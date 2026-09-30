@@ -106,7 +106,7 @@ const Interventions = {
     const st = this.STATUTS[i.statut] || this.STATUTS.demande;
     const prio = i.priorite === 'urgente' ? ' · <span class="badge badge-danger">Urgent</span>' : '';
     const benevListe = (typeof Storage !== 'undefined' && Storage.getBenevoles) ? Storage.getBenevoles(i) : [];
-    const benev = benevListe.length > 0 ? benevListe.map(b => `👤 ${Utils.escapeHtml(b)}`).join(' · ') : '<em style="color:var(--text-light);">Non assigné</em>';
+    const benev = benevListe.length > 0 ? benevListe.map(b => `🤝 ${Utils.escapeHtml(b)}`).join(' · ') : '<em style="color:var(--text-light);">Non assigné</em>';
     const dateP = i.datePrevue
       ? `📅 ${Utils.formatDate(i.datePrevue)}${i.heurePrevue ? ' à ' + Utils.escapeHtml(i.heurePrevue) : ''}`
       : '';
