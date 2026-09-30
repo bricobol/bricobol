@@ -336,6 +336,9 @@ const Missions = {
     }
 
     let extra = '';
+    if ((i.statut === "terminee" || i.statut === "validee") && !i.deplacementId) {
+      extra += `<div style="margin-top:6px;padding:6px 10px;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;font-size:.78rem;color:#ea580c;font-weight:700;">⚠️ Frais à créer</div>`;
+    }
     if (i.prisEnChargeLe) {
       extra += `<div style="font-size:.75rem;color:var(--text-light);margin-top:4px;">🔵 Prise en charge : ${new Date(i.prisEnChargeLe).toLocaleDateString('fr-FR')}</div>`;
     }
