@@ -69,7 +69,9 @@ const Interventions = {
         if (!hay.includes(q)) return false;
       }
       if (type && i.type !== type) return false;
-      if (statut && i.statut !== statut) return false;
+      if (statut === "sans_frais") {
+        if (!((i.statut === "terminee" || i.statut === "validee") && !i.deplacementId && !i.sansFrais)) return false;
+      } else if (statut && i.statut !== statut) return false;
       return true;
     });
   },
@@ -584,15 +586,14 @@ const Interventions = {
               <option value="🍎 Cueillette solidaire">🍎 Cueillette solidaire</option>
               <option value="Autre">Autre</option>
             </select>
-            <select id="intFilterStatut" onchange="Interventions.render()" style="padding:9px;border:1px solid var(--border);border-radius:8px;font-size:.88rem;">
               <option value="">Tous statuts</option>
               <option value="demande">Demandes</option>
               <option value="planifiee">Planifiées</option>
               <option value="en_cours">En cours</option>
               <option value="terminee">Terminées</option>
               <option value="annulee">Annulées</option>
+              <option value="sans_frais">🚗 Frais à créer</option>
             </select>
-          </div>
           <div style="margin-top:10px;font-size:.82rem;color:var(--text-light);" id="intCount">0 intervention</div>
         </div>
         <div id="interventionsListContainer"></div>
@@ -623,14 +624,12 @@ const Interventions = {
                     <option value="🍎 Cueillette solidaire">🍎 Cueillette solidaire</option>
                     <option value="Autre">Autre</option>
                   </select>
-                </div>
                 <div class="form-group">
                   <label>Priorité</label>
                   <select id="intPriorite">
                     <option value="normale">Normale</option>
                     <option value="urgente">Urgente</option>
                   </select>
-                </div>
               </div>
               <div class="form-group">
                 <label>Demandeur *</label>
@@ -656,7 +655,6 @@ const Interventions = {
                     <option value="terminee">Terminée</option>
                     <option value="annulee">Annulée</option>
                   </select>
-                </div>
               </div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                 <div class="form-group"><label>Date prévue</label><input type="date" id="intDatePrevue"></div>
@@ -697,7 +695,16 @@ const Interventions = {
       </div>`;
   },
 
-  onShow() { this.render(); }
+  onShow(params) {
+    if (params && params.statut) {
+      setTimeout(() => {
+        const sel = document.getElementById("intFilterStatut");
+        if (sel) { sel.value = params.statut; }
+        this.render();
+      }, 80);
+    }
+    this.render();
+  },
 };
 
 Router.register({

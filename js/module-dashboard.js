@@ -218,7 +218,7 @@ const Dashboard = {
           texte: sansFrais.length + " intervention" + (sansFrais.length > 1 ? "s" : "") + " terminee" + (sansFrais.length > 1 ? "s" : "") + " sans frais crees",
           action: "Voir",
           view: "interventions",
-          params: {},
+          params: { statut: "sans_frais" },
           couleur: "#ea580c",
           bg: "#fff7ed",
           border: "#fed7aa"
