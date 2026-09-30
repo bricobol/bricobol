@@ -186,7 +186,7 @@ const Missions = {
 
   ouvrirDetail(id) {
     BricoBol.ensureModuleMounted('interventions');
-    if (typeof Interventions !== 'undefined') Interventions.openDetail(id);
+    if (typeof Interventions !== 'undefined') setTimeout(() => Interventions.openDetail(id), 80);
   },
 
   ouvrirCalculFrais(idOptionnel) {
@@ -382,7 +382,7 @@ const Missions = {
     if (typeof Router !== 'undefined' && Router.mountIfNeeded && Router.registry['interventions']) {
       Router.mountIfNeeded('interventions', Router.registry['interventions']);
     }
-    if (typeof Interventions !== 'undefined') Interventions.openDetail(id);
+    if (typeof Interventions !== 'undefined') setTimeout(() => Interventions.openDetail(id), 80);
   },
 
   // ---------- Modale PRENDRE LA MISSION ----------
