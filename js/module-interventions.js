@@ -161,6 +161,7 @@ const Interventions = {
         </div>
         <div class="adh-card-actions">
           ${i.statut === 'annulee' ? `<button class="adh-btn-edit" style="background:#16a34a;" title="Réactiver" onclick="event.stopPropagation();Interventions.reactiver(${i.id})">↩️</button>` : ''}
+          <button class="adh-btn-edit" style="background:${dons.length > 0 ? '#16a34a' : '#7c3aed'};" title="${dons.length > 0 ? 'Voir/ajouter des dons' : 'Don reçu'}" onclick="event.stopPropagation();Interventions.saisirDon(${i.id})">${dons.length > 0 ? '💰' : '🎁'}</button>
           <button class="adh-btn-edit" onclick="event.stopPropagation();Interventions.openForm(${i.id})">✏️</button>
           <button class="adh-btn-del" onclick="event.stopPropagation();Interventions.remove(${i.id})">🗑️</button>
         </div>
@@ -399,9 +400,7 @@ const Interventions = {
         </div>`;
     }
 
-    const boutonDon = i.adherentId
-      ? `<button class="btn" style="background:var(--purple);" onclick="Interventions.saisirDon(${i.id})">🎁 Don reçu</button>`
-      : '';
+    const boutonDon = `<button class="btn" style="background:var(--purple);" onclick="Interventions.saisirDon(${i.id})">🎁 Don reçu</button>`;
 
     const datePrevueAffiche = i.datePrevue
       ? `📅 Prévenue : ${Utils.formatDate(i.datePrevue)}${i.heurePrevue ? ' à ' + Utils.escapeHtml(i.heurePrevue) : ''}`
@@ -505,10 +504,24 @@ const Interventions = {
 
   saisirDon(interventionId) {
     const i = this.getAll().find(x => x.id === interventionId);
-    if (!i || !i.adherentId) { alert('Cette intervention n\'est pas liée à un contact.'); return; }
-    if (typeof Dons === 'undefined') { alert('Module Dons non disponible.'); return; }
-    if (typeof Router !== 'undefined' && Router.mountIfNeeded && Router.registry['dons']) {
-      Router.mountIfNeeded('dons', Router.registry['dons']);
+    if (!i) return;
+    if (!i.adherentId && i.demandeur) {
+      const nomC = i.demandeur.toLowerCase().trim();
+      const adh = Storage.getAdherents().find(a => {
+        const t = ((a.prenom || "") + " " + (a.nom || "")).toLowerCase().trim();
+        const t2 = ((a.nom || "") + " " + (a.prenom || "")).toLowerCase().trim();
+        return t === nomC || t2 === nomC;
+      });
+      if (adh) {
+        const list = this.getAll();
+        const ix = list.findIndex(x => x.id === interventionId);
+        if (ix !== -1) { list[ix].adherentId = adh.id; this.saveAll(list); i.adherentId = adh.id; }
+      }
+    }
+    if (!i.adherentId) { alert("Contact introuvable dans l annuaire. Ajoutez-le d abord."); return; }
+    if (typeof Dons === "undefined") { alert("Module Dons non disponible."); return; }
+    if (typeof Router !== "undefined" && Router.mountIfNeeded && Router.registry["dons"]) {
+      Router.mountIfNeeded("dons", Router.registry["dons"]);
     }
     this.closeDetail();
     Dons.openForm(null, { adherentId: i.adherentId, interventionNumero: i.numero });

@@ -1,6 +1,6 @@
 ================================================================
 CONTEXTE PROJET BRICOBOL
-Dernière mise à jour : 26/09/2026 (fin Session 2 Distances)
+Dernière mise à jour : 01/10/2026 (fin Refonte Missions/Interventions)
 ================================================================
 ⚠️ FICHIER AUTONOME — tout est là pour reprendre sur un
    nouveau chat, une nouvelle IA, ou après une longue pause.
@@ -26,6 +26,7 @@ Application de gestion pour l'association BricoBol.
 - 2-4 appareils synchronisés
 - Utilisation quotidienne
 - Développement sur PC (VS Code) — terminal PowerShell
+- Développement mobile possible via Acode (terminal intégré Alpine)
 
 ## ⚠️ STRUCTURE RÉELLE DU PROJET
 
@@ -41,11 +42,11 @@ bricobol/
 │   ├── supabase-client.js     ← 15 Ko
 │   ├── app.js                 ← 3 Ko
 │   ├── module-dashboard.js    ← 12 Ko
-│   ├── module-tournee.js      ← 62 Ko
-│   ├── module-missions.js     ← 66 Ko
+│   ├── module-tournee.js      ← 62 Ko (DORMANCE)
+│   ├── module-missions.js     ← ~830 lignes (REFONTE 01/10)
 │   ├── module-adherents.js    ← 94 Ko
 │   ├── module-formulaire.js   ← 43 Ko
-│   ├── module-interventions.js ← 38 Ko
+│   ├── module-interventions.js ← ~740 lignes
 │   ├── module-agenda.js       ← 30 Ko
 │   ├── module-frais.js        ← 48 Ko
 │   ├── module-cotisations.js  ← 43 Ko
@@ -56,39 +57,540 @@ bricobol/
 ├── build.js                   ← Génère bricobol-mobile.html
 ├── decouper.js                ← Outil de découpage (référence)
 ├── manifest.json
-├── sw.js                      ← Service Worker v22
+├── sw.js                      ← Service Worker v45
 ├── icon.svg
 ├── android-chrome-*.png
 ├── .well-known/assetlinks.json
 ├── .gitignore
 └── bricobol-mobile.html       ← Généré par build.js (ignoré)
 
-**Fichiers ignorés par Git :**
+Fichiers ignorés par Git :
 - index-monolithe-*.html
 - bricobol-mobile.html
-- *.backup, *.backup2, etc.
-- index.html.backup*, *.new, fix*.sh, fix*.awk
+- *.backup, *.backup2, *.bak
+- index.html.backup*, *.new, fix*.sh, fix*.awk, _fix.ps1
 
-## 🎯 WORKFLOW DE MODIFICATION (IMPORTANT)
+## 🎯 WORKFLOW DE MODIFICATION
 
-**MÉTHODE RECOMMANDÉE : scripts PowerShell** (beaucoup plus
-rapide et sûr que Ctrl+H manuel).
+### Sur PC — scripts PowerShell
 
-**Modèle :**
+**Méthode standard (mono-ligne) :**
 ```powershell
-Copy-Item js/module-XXX.js js/module-XXX.js.backup; @'
-$file = "js/module-XXX.js"
-$content = [System.IO.File]::ReadAllText((Resolve-Path $file).Path)
-$nl = if ($content.Contains("`r`n")) { "`r`n" } else { "`n" }
+Clear-Host; $f="js/module-XXX.js"; $enc=New-Object System.Text.UTF8Encoding $false; $c=[System.IO.File]::ReadAllText((Resolve-Path $f).Path, $enc); $c=$c.Replace('OLD','NEW'); [System.IO.File]::WriteAllText((Resolve-Path $f).Path, $c, $enc); node --check $f; if ($LASTEXITCODE -eq 0) { "SYNTAX OK" | clip } else { "SYNTAX KO"; node --check $f 2>&1 | clip }
+Astuce | clip : envoie le résultat dans le presse-papiers → Ctrl+V direct dans le chat.
 
-$search = '...'
-$replace = '...'
+Serveur local pour tester :
 
-if ($content.Contains($search)) {
-  $newContent = $content.Replace($search, $replace)
-  [System.IO.File]::WriteAllText((Resolve-Path $file).Path, $newContent, [System.Text.UTF8Encoding]::new($false))
-  Write-Host "OK" -ForegroundColor Green
-} else {
-  Write-Host "ERREUR - Pattern non trouve" -ForegroundColor Red
+powershell
+npx --yes http-server -p 8000 -c-1
+Puis ouvrir http://localhost:8000
+
+⚠️ PIÈGES POWERSHELL CRITIQUES
+Set-Content -Encoding UTF8 ajoute un BOM → casse les accents. Toujours utiliser :
+
+powershell
+[System.IO.File]::WriteAllText($path, $content, [System.Text.UTF8Encoding]::new($false))
+\r\n ne fonctionne PAS en mono-ligne → utiliser [char]13+[char]10
+
+Emojis : [char]0x1F381 plante. Utiliser :
+
+powershell
+[char]::ConvertFromUtf32(0x1F381)
+Apostrophes françaises dans les alert() : utiliser " (guillemets) en JS, pas '
+
+Multi-lignes : passer par un fichier _fix.ps1 séparé avec here-string @'...'@ | Out-File; puis exécuter
+
+Sur smartphone — Acode + terminal Alpine
+Éditer dans /storage/emulated/0/bricobol-dev/
+
+Terminal pour sed, grep, git
+
+Piège : ne PAS faire de copie croisée bricobol-dev → ~/bricobol (écrase les modifs)
+
+Clear terminal : printf '\033[2J\033[3J\033[H'
+
+Après modif
+VS Code peut avoir cache → fermer/rouvrir l'onglet
+
+F5 navigateur pour tester
+
+⚠️ GitHub Pages sert la version MODULAIRE
+
+⚠️ NE PAS modifier bricobol-mobile.html
+
+⚠️ Incrémenter sw.js avant chaque commit
+
+⚠️ Toujours git push
+
+HÉBERGEMENT
+GitHub repo : https://github.com/bricobol/bricobol
+
+GitHub Pages : https://bricobol.github.io/bricobol/
+
+Compte GitHub : bricobol
+
+SUPABASE — IDENTIFIANTS
+URL : https://qhdrzapdcvjvjkzagkza.supabase.co
+Clé publishable : sb_publishable_AEEocm-2pofdWsumlxS83Q_0mesUy9R
+Project ref : qhdrzapdcvjvjkzagkza
+Email compte : bricobol.asso@proton.me
+Région : Europe / Plan : Free
+
+Tables : adherents, cotisations, entries, interventions,
+deplacements, dons, evenements, documents, parametres (id=1),
+counters (key/value)
+
+RLS : user connecté = tout autorisé
+
+AUTHENTIFICATION APP
+Login email + mot de passe Supabase
+
+"Se souvenir de moi" → localStorage bricobol_supa_creds
+
+Détection pause (PGRST503) → bandeau rouge
+
+APK ANDROID
+PWABuilder, Package ID : io.github.bricobol.twa
+
+Signé (signing.keystore à garder)
+
+Wiko, lanceur Fossify Org
+
+⚠️ APK actuelle datée d'AVANT le refacto modulaire
+
+ÉTAT DES DONNÉES (01/10/2026)
+adherents : 20
+
+cotisations : 18
+
+entries : 21
+
+interventions : 22 (statuts : demande=7, planifiee=2, terminee=10, annulee=3)
+
+deplacements : 3
+
+dons : 4 (dont 1 lié à une intervention : INT-002)
+
+VERSION UNIFIÉE
+Toute l'app affiche v0.5.
+sw.js cache : bricobol-v45
+
+COLONNES SUPABASE
+cotisations : notes
+entries : notes
+deplacements : mode_remboursement, note_remboursement, compta_id, compta_piece
+interventions : benevole_2, a_relancer (JSONB), pris_en_charge_le, demarree_le, fini_le, km_declares, km_valides, remarque_benevole, validee_le, deplacement_id, benevoles (JSONB), adherent_id, sans_frais (BOOL)
+adherents : statut, source, finaliser_masque
+dons : intervention_id
+heures_benevoles (à faire, JSONB) : pour récap heures par bénévole
+
+CLEFS LOCALSTORAGE
+Préfixe : bricobol_
+bricobol_adherents, bricobol_cotisations, bricobol_entries,
+bricobol_interventions, bricobol_deplacements, bricobol_dons,
+bricobol_evenements, bricobol_documents, bricobol_parametres,
+bricobol_adh_counter, bricobol_active_view, bricobol_supa_creds,
+bricobol_migre_v1, bricobol_agenda_prefs
+
+LISTE DES 18 MODULES
+storage.js — cache + Supabase + DELETE + file attente
+
+utils.js — dates, formatage, échappement
+
+router.js — registry + menu + navigation + hash URL
+
+supabase-client.js — client Supabase + CRUD + pause
+
+app.js — app shell + ensureModuleMounted
+
+module-dashboard.js
+
+module-tournee.js — EN DORMANCE
+
+module-missions.js — REFONTE 01/10 (4 onglets)
+
+module-adherents.js
+
+module-formulaire.js
+
+module-interventions.js — REFONTE 01/10 (statuts simplifiés)
+
+module-agenda.js
+
+module-frais.js
+
+module-cotisations.js
+
+module-dons.js
+
+module-comptabilite.js
+
+module-documents.js
+
+module-parametres.js
+
+MENU / ORDRE
+Vue d'ensemble : Dashboard / Tournee (dormance)
+Activité : Missions, Adherents, Interventions, Agenda,
+Frais, Cotisations, Dons, Formulaire
+Gestion : Comptabilite, Documents, Parametres
+
+STATUTS INTERVENTIONS (SIMPLIFIÉS 01/10/2026)
+4 statuts définitifs :
+
+demande → label "Demande" (badge gris)
+
+planifiee → label "Planifiée" (badge orange)
+
+terminee → label "Terminée" (badge vert)
+
+annulee → label "Annulée" (badge rouge, caché par défaut)
+
+"À valider" n'est PAS un statut en base → calculé :
+statut === 'planifiee' && _estPassee(i) (date/heure dépassées)
+
+Migration faite en base le 01/10 :
+
+prise, en_cours, a_valider → planifiee (si date) sinon demande
+
+relancer → demande
+
+validee → terminee
+
+NUMÉROTATION
+ADH-XXX, INT-XXX, DEP-XXX, REC-XXX, ACH-XXX
+
+🔗 HASH D'URL
+bricobol.github.io/bricobol/#agenda → ouvre l'agenda
+
+Priorité : hash > localStorage > dashboard
+
+Raccourcis manifest.json : Agenda / Missions / Frais / Cotisations
+
+🧩 BricoBol.ensureModuleMounted(viewName)
+Force l'injection des vues + modales d'un module dans le DOM.
+
+🖥️ OUTILLAGE DE DÉVELOPPEMENT
+PC (principal) — VS Code + Git Credential Manager
+
+Dossier :
+C:\Users\pc\Desktop\BricoBol\Association BricoBol\9. Logiciel pc bricobol\Application BricoBol\Application avec vscode\bricobol
+
+Git config :
+user.name=bricobol
+user.email=bricobol.asso@proton.me
+credential.helper=manager
+
+Commandes usuelles :
+
+node build.js — reconstruit bricobol-mobile.html
+
+npx http-server -p 8000 -c-1 — serveur local pour tester
+
+git add / commit / push
+
+Scripts PowerShell pour les modifs
+
+Mobile — Acode (F-Droid) + terminal intégré Alpine
+
+📜 HISTORIQUE DES COMMITS RÉCENTS
+Session 30/09/2026 (mobile)
+
+9533943 Distances Phases A+B+C
+
+c300265 Fix: bouton Assigner benevoles
+
+8e9eddd Fix: sw.js v24
+
+f6ccf80 Fix: icone benevoles en 🤝
+
+Session 01/10/2026 (PC — refonte Missions)
+
+780c080 Phase D distances (brut+appliqué+durée)
+
+b777a23 Clean backup + gitignore
+
+88f4d15 Amelioration 3: alerte dashboard frais
+
+8baf391 Amelioration 4: badge missions
+
+a06bb4f Amelioration A: badge interventions
+
+69979b0 Amelioration B: filtre cible dashboard
+
+376fc4e Amelioration C: bouton Pas de frais
+
+6c819c6 Fix: icone 🚗
+
+a209f81 Fix: restaurer select filtre statut
+
+f46e132 Fix: badge frais base sur getFrais
+
+1a2e490 Fix: ouvrirDetail missions delai
+
+64590a9 Fix: delai onShow 250ms
+
+122fdf6 Fix: fermeture div modale
+
+b777a23 / 3a342df Fix: encodage UTF-8
+
+REFONTE Missions (4 onglets, migration, Dashboard adapté)
+
+Bouton ↩️ Réactiver (fiche + carte)
+
+Bouton 🎁/💰 Don sur cartes + auto-liaison adhérent
+
+✅ CHANTIER TERMINÉ — BÉNÉVOLES MULTIPLES
+Assigner N bénévoles (modale liste à cocher)
+
+Calcul frais multi-bénévoles
+
+Adresses de départ éditables par bénévole
+
+Champ km manuel par bénévole
+
+Helpers Storage :
+
+getBenevoles(intervention) → array
+
+setBenevoles(intervention, liste) → écrit benevoles + synchronise
+
+✅ CHANTIER TERMINÉ — MESSAGES
+Envoi email/SMS avec modèles configurables.
+
+Variables : {prenom}, {nom}, {date}, {heure}, {asso}, {site}, {intervention}, {type}
+
+✅ CHANTIER TERMINÉ — FUSION TOURNÉE → MISSIONS
+✅ CHANTIER TERMINÉ — DISTANCES Sessions 1-2 Phases A/B/C/D
+Coefficient sécurité km (défaut 1.15) dans Paramètres
+
+Frais.routeDetail() retourne { kmBrut, kmApplique, coef, dureeMin }
+
+Affichage "📐 brut × coef = appliqué · ⏱️ ≈ N min" partout
+
+⏳ Sessions 3-4 distances : Mapbox + durée partout (à faire)
+
+✅ CHANTIER TERMINÉ — AMÉLIORATIONS FLUX FRAIS
+Bouton 🚗 partout ✅
+
+Validation ne crée plus de frais ✅
+
+Rappel Dashboard "frais à créer" ✅
+
+Badge "⚠️ Frais à créer" cartes ✅
+
+✅ CHANTIER TERMINÉ — REFONTE MISSIONS (01/10/2026)
+Module-missions.js réécrit complètement (829 lignes)
+
+4 onglets :
+
+📅 Aujourd'hui = planifiee du jour + en retard
+
+📋 À venir = planifiee J+1 → J+6 (tri date/heure)
+
+⏳ À valider = planifiee avec date/heure passées
+
+📚 Historique = terminee des 30 derniers jours
+
+Workflow simplifié :
+
+text
+demande → 📅 Planifier → planifiee
+                        ↓ jour J
+              ✅ Fait → terminee
+                        ↓
+              (Dashboard → ⏳ À valider si date passée)
+Modales gardées : Fait, Reporter, Valider (km), Assigner, 🆕 Planifier
+
+Modales supprimées : Prendre, Démarrer, Terminer, Relancer
+
+Stubs compat (utilisés par Dashboard) :
+
+getJour(), getEnRetard(), _compterBenevoles()
+
+Boutons sur cartes Missions :
+
+planifiee → ✅ Fait · 📅 Reporter
+
+planifiee passée → ✔️ Valider
+
+Tous → 👤 Assigner · 🚗 · 👁️ Fiche
+
+✅ CHANTIER TERMINÉ — INTERVENTIONS (01/10/2026)
+Statuts simplifiés (4 au lieu de 9)
+
+Tri par date/heure prévue
+
+Annulées cachées par défaut (filtre pour voir)
+
+Filtre "⏳ À valider" calculé
+
+Helper _estPassee(i)
+
+Bouton ↩️ Réactiver sur fiches + cartes annulées
+
+Bouton 🎁/💰 sur cartes (violet = pas de don, vert = don existant)
+
+Auto-liaison adhérent par nom lors du clic sur 🎁
+
+Bouton 🚫 Pas de frais (exclu des alertes)
+
+✅ CHANTIER TERMINÉ — DONS ↔ INTERVENTION
+Déjà en place (Session Mobile 30/09) :
+
+Select "Intervention liée" dans formulaire Don
+
+Badge 🎁 sur cartes Interventions
+
+Section "Dons de soutien" dans fiche Intervention
+
+Colonne "Dons reçus" dans export CSV
+
+Bouton 🎁 Don reçu sur fiche (auto-liaison adhérent)
+
+🆕 PRIORITÉS EN ATTENTE
+🟠 P1 — Heures bénévoles (~1-2h)
+
+Saisie heure début/fin à la validation de mission
+
+Récap par bénévole (total heures, missions, période)
+
+Export PDF/CSV pour Pôle Emploi / impôts
+
+Cas : bénévole ajouté après validation → saisir ses heures
+
+SQL : ALTER TABLE interventions ADD COLUMN IF NOT EXISTS heures_benevoles JSONB;
+
+Structure : heuresBenevoles: { "Vincent": { debut: "09:00", fin: "12:00" } }
+
+🟠 P2 — Préfiche auto (~1-2h)
+
+Quand on crée une intervention en demande :
+
+Chercher adhérent par tel OU (nom + prénom)
+
+Sinon créer préfiche (statut = 'prefiche')
+
+Badge "⚠️ À finaliser" si manque 1 des 4 : nom, prénom, tel, adresse
+
+Bouton "✅ Marquer OK" → finaliser_masque = true
+
+🟠 P3 — Regénérer APK (~30 min)
+
+🟠 P4 — Session 3 Distances (Mapbox) (~1h)
+
+🟠 P5 — Session 4 Distances (durée partout) (~30 min)
+
+🟠 P6 — Achats bénévoles à rembourser (SQL + Compta + Frais)
+
+🟠 P7 — Vérifier assetlinks.json
+
+📝 NOTES DÉTAILLÉES
+HEURES BÉNÉVOLES — structure
+sql
+ALTER TABLE interventions ADD COLUMN IF NOT EXISTS heures_benevoles JSONB;
+Structure (option non destructive) :
+
+text
+benevoles: ["Vincent", "Ilhem"]
+heuresBenevoles: {
+  "Vincent": { debut: "09:00", fin: "12:00" },
+  "Ilhem":   { debut: "09:00", fin: "12:00" }
 }
-'@ | Out-File -Encoding utf8 _fix.ps1; powershell -ExecutionPolicy Bypass -File _fix.ps1; Remove-Item _fix.ps1
+Où voir le récap :
+
+Fiche bénévole → section "⏱️ Heures bénévoles"
+
+Bouton "📄 Générer récap" (période au choix)
+
+ACHATS BÉNÉVOLES À REMBOURSER
+SQL :
+
+sql
+ALTER TABLE entries ADD COLUMN IF NOT EXISTS statut TEXT DEFAULT 'validee';
+ALTER TABLE entries ADD COLUMN IF NOT EXISTS benevole_rembourser TEXT;
+ALTER TABLE entries ADD COLUMN IF NOT EXISTS fournisseur TEXT;
+ALTER TABLE entries ADD COLUMN IF NOT EXISTS date_remboursement TIMESTAMPTZ;
+ALTER TABLE entries ADD COLUMN IF NOT EXISTS mode_remboursement TEXT;
+ALTER TABLE entries ADD COLUMN IF NOT EXISTS note_remboursement TEXT;
+AGENDA — AMÉLIORATIONS (à faire)
+Paramètres agenda configurables
+
+Aide à la prise de RDV
+
+Import agendas ICS
+
+Lecture rapide agenda
+
+Synchronisation Fossify Agenda
+
+AUTRES IDÉES
+Excel Cotisations/Dons/Frais/Annuaire
+
+Synchro temps réel (WebSocket)
+
+PDF propre documents
+
+Graphiques Dashboard
+
+Recherche globale
+
+Statistiques par type / mois / bénévole
+
+Import HelloAsso / Yapla
+
+Notifications push
+
+Widget Android
+
+Carte géographique des interventions
+
+⚠️ PIÈGES À ÉVITER
+Backslashes dans les heredocs PowerShell
+
+Sauts de ligne : [char]13+[char]10 (mono-ligne) ou here-string (fichier)
+
+Set-Content -Encoding UTF8 ajoute un BOM → casser accents
+
+Emojis : [char]::ConvertFromUtf32(0x1F381) (pas [char]0x1F381)
+
+Apostrophes françaises en JS : utiliser guillemets doubles
+
+Modale derrière une autre : fermer la parente d'abord
+
+Modules non montés : ensureModuleMounted()
+
+NE PAS modifier bricobol-mobile.html
+
+NE PAS relancer decouper.js
+
+NE PAS oublier d'incrémenter sw.js avant commit
+
+Mapping Storage : pas de self-mapping
+
+onShow: () => X.onShow() perd les params → (params) => X.onShow(params)
+
+Vérifier la hiérarchie DOM des modales (imbrication = invisible)
+
+Mobile Acode : ne PAS faire de copie croisée ~/bricobol → bricobol-dev
+
+Mobile Acode : .git ne peut pas être cloné dans /storage/emulated/0
+
+BUILD
+node build.js → bricobol-mobile.html
+
+COMMENT REPRENDRE
+Coller ce fichier
+
+Dire "On continue le projet BricoBol"
+
+Préciser PC ou mobile
+
+Dire la priorité (ex : "Heures bénévoles")
+
+COMMENT DEMANDER UNE MODIF
+Format : "Dans [module], [ce que je veux]."
+L'IA propose un plan AVANT de coder.
+Utiliser des scripts PowerShell (PC) ou commandes sed/grep (mobile).
+
+================================================================
