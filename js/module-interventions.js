@@ -160,6 +160,7 @@ const Interventions = {
           ${fraisInline}${donsInline}${badgeFrais}
         </div>
         <div class="adh-card-actions">
+          ${i.statut === 'annulee' ? `<button class="adh-btn-edit" style="background:#16a34a;" title="Réactiver" onclick="event.stopPropagation();Interventions.reactiver(${i.id})">↩️</button>` : ''}
           <button class="adh-btn-edit" onclick="event.stopPropagation();Interventions.openForm(${i.id})">✏️</button>
           <button class="adh-btn-del" onclick="event.stopPropagation();Interventions.remove(${i.id})">🗑️</button>
         </div>
@@ -290,6 +291,24 @@ const Interventions = {
     this.render();
     this.closeDetail();
     if (typeof Agenda !== 'undefined') Agenda.render();
+    BricoBol.updateStorageInfo();
+  },
+
+  reactiver(id) {
+    const list = this.getAll();
+    const idx = list.findIndex(x => String(x.id) === String(id));
+    if (idx === -1) return;
+    if (!confirm('Reactiver cette intervention ? Elle repassera en statut Demande.')) return;
+    list[idx].statut = 'demande';
+    delete list[idx].datePrevue;
+    delete list[idx].heurePrevue;
+    delete list[idx].dateRealisee;
+    delete list[idx].heureRealisee;
+    delete list[idx].valideeLe;
+    this.saveAll(list);
+    this.openDetail(id);
+    this.render();
+    if (typeof Dashboard !== 'undefined' && Dashboard.render) Dashboard.render();
     BricoBol.updateStorageInfo();
   },
 
@@ -424,6 +443,7 @@ const Interventions = {
         ${i.statut === 'demande' ? `<button class="btn" style="background:var(--warning);" onclick="Interventions.changerStatut(${i.id}, 'planifiee')">📅 Planifier</button>` : ''}
         
         <button class="btn btn-danger" onclick="Interventions.remove(${i.id})">🗑️ Supprimer</button>
+        ${i.statut === 'annulee' ? `<button class="btn" style="background:#16a34a;" onclick="Interventions.reactiver(${i.id})">↩️ Réactiver</button>` : ''}
       </div>`;
     document.getElementById('interventionDetailModal').classList.add('active');
   },
