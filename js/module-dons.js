@@ -933,5 +933,5 @@ Router.register({
   order: 4,
   getViewHTML: () => Dons.getViewHTML(),
   getModalsHTML: () => Dons.getModalsHTML(),
-  onShow: () => Dons.onShow()
+  onShow: (params) => Dons.onShow(params)
 });

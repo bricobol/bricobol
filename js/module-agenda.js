@@ -646,5 +646,5 @@ Router.register({
   order: 3,
   getViewHTML: () => Agenda.getViewHTML(),
   getModalsHTML: () => Agenda.getModalsHTML(),
-  onShow: () => Agenda.onShow()
+  onShow: (params) => Agenda.onShow(params)
 });

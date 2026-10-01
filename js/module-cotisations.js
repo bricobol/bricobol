@@ -873,5 +873,5 @@ Router.register({
   order: 4,
   getViewHTML: () => Cotisations.getViewHTML(),
   getModalsHTML: () => Cotisations.getModalsHTML(),
-  onShow: () => Cotisations.onShow()
+  onShow: (params) => Cotisations.onShow(params)
 });

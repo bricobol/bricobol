@@ -1323,5 +1323,5 @@ Router.register({
   order: 1,
   getViewHTML: () => Missions.getViewHTML(),
   getModalsHTML: () => Missions.getModalsHTML(),
-  onShow: () => Missions.onShow()
+  onShow: (params) => Missions.onShow(params)
 });

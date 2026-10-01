@@ -1007,5 +1007,5 @@ Router.register({
   order: 3,
   getViewHTML: () => Frais.getViewHTML(),
   getModalsHTML: () => Frais.getModalsHTML(),
-  onShow: () => Frais.onShow()
+  onShow: (params) => Frais.onShow(params)
 });

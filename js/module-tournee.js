@@ -1475,5 +1475,5 @@ const Tournee = {
 //   order: 2,
 //   getViewHTML: () => Tournee.getViewHTML(),
 //   getModalsHTML: () => Tournee.getModalsHTML(),
-//   onShow: () => Tournee.onShow()
+//   onShow: (params) => Tournee.onShow(params)
 // });

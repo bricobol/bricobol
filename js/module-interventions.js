@@ -734,5 +734,5 @@ Router.register({
   order: 2,
   getViewHTML: () => Interventions.getViewHTML(),
   getModalsHTML: () => Interventions.getModalsHTML(),
-  onShow: () => Interventions.onShow()
+  onShow: (params) => Interventions.onShow(params)
 });

@@ -620,5 +620,5 @@ Router.register({
   getViewHTML: () => Compta.getViewHTML(),
   getModalsHTML: () => Compta.getModalsHTML(),
   mount: () => Compta.mount(),
-  onShow: () => Compta.onShow()
+  onShow: (params) => Compta.onShow(params)
 });

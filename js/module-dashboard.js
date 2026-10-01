@@ -312,5 +312,5 @@ Router.register({
   order: 1,
   getViewHTML: () => Dashboard.getViewHTML(),
   getModalsHTML: () => Dashboard.getModalsHTML(),
-  onShow: () => Dashboard.onShow()
+  onShow: (params) => Dashboard.onShow(params)
 });

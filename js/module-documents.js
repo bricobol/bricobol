@@ -687,5 +687,5 @@ Router.register({
   order: 4,
   getViewHTML: () => Documents.getViewHTML(),
   getModalsHTML: () => Documents.getModalsHTML(),
-  onShow: () => Documents.onShow()
+  onShow: (params) => Documents.onShow(params)
 });

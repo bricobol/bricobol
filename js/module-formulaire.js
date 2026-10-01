@@ -701,5 +701,5 @@ Router.register({
   order: 4,
   getViewHTML: () => Formulaire.getViewHTML(),
   getModalsHTML: () => Formulaire.getModalsHTML(),
-  onShow: () => Formulaire.onShow()
+  onShow: (params) => Formulaire.onShow(params)
 });

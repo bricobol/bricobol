@@ -1018,5 +1018,5 @@ Router.register({
   order: 4,
   getViewHTML: () => Parametres.getViewHTML(),
   getModalsHTML: () => Parametres.getModalsHTML(),
-  onShow: () => Parametres.onShow()
+  onShow: (params) => Parametres.onShow(params)
 });
