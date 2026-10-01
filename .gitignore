@@ -9,3 +9,6 @@ index-monolithe-*.html
 # Build (regenerable)
 bricobol-mobile.html
 *.backup
+*.backup*
+_fix.ps1
+*.bak
