@@ -1,19 +1,19 @@
-﻿// ============================================================
-// MODULE : INTERVENTIONS Ã¢â‚¬â€ Carnet de mission + cartes cliquables
+// ============================================================
+// MODULE : INTERVENTIONS â�,��?� Carnet de mission + cartes cliquables
 // ============================================================
 
 const Interventions = {
 
   STATUTS: {
-    demande:   { label: 'Ãƒâ‚¬ prendre en charge', badge: 'badge-neutral', color: '#64748b' },
+    demande:   { label: '�f�,� prendre en charge', badge: 'badge-neutral', color: '#64748b' },
     prise:     { label: 'Prise en charge',     badge: 'badge-warning', color: '#f59e0b' },
-    planifiee: { label: 'PlanifiÃƒÂ©e',           badge: 'badge-warning', color: '#f59e0b' },
+    planifiee: { label: 'Planifi�f©e',           badge: 'badge-warning', color: '#f59e0b' },
     en_cours:  { label: 'En cours',            badge: 'badge-info',    color: '#0ea5e9' },
-    a_valider: { label: 'Ãƒâ‚¬ valider',           badge: 'badge-warning', color: '#eab308' },
-    relancer:  { label: 'Ãƒâ‚¬ relancer',          badge: 'badge-warning', color: '#8b5cf6' },
-    validee:   { label: 'ValidÃƒÂ©e',             badge: 'badge-success', color: '#16a34a' },
-    terminee:  { label: 'ValidÃƒÂ©e',             badge: 'badge-success', color: '#16a34a' },
-    annulee:   { label: 'AnnulÃƒÂ©e',             badge: 'badge-danger',  color: '#dc2626' }
+    a_valider: { label: '�f�,� valider',           badge: 'badge-warning', color: '#eab308' },
+    relancer:  { label: '�f�,� relancer',          badge: 'badge-warning', color: '#8b5cf6' },
+    validee:   { label: 'Valid�f©e',             badge: 'badge-success', color: '#16a34a' },
+    terminee:  { label: 'Valid�f©e',             badge: 'badge-success', color: '#16a34a' },
+    annulee:   { label: 'Annul�f©e',             badge: 'badge-danger',  color: '#dc2626' }
   },
 
   getAll() { return Storage.getInterventions(); },
@@ -106,27 +106,27 @@ const Interventions = {
 
   renderCard(i) {
     const st = this.STATUTS[i.statut] || this.STATUTS.demande;
-    const prio = i.priorite === 'urgente' ? ' Ã‚Â· <span class="badge badge-danger">Urgent</span>' : '';
+    const prio = i.priorite === 'urgente' ? ' �,· <span class="badge badge-danger">Urgent</span>' : '';
     const benevListe = (typeof Storage !== 'undefined' && Storage.getBenevoles) ? Storage.getBenevoles(i) : [];
-    const benev = benevListe.length > 0 ? benevListe.map(b => `Ã°Å¸Â¤Â ${Utils.escapeHtml(b)}`).join(' Ã‚Â· ') : '<em style="color:var(--text-light);">Non assignÃƒÂ©</em>';
+    const benev = benevListe.length > 0 ? benevListe.map(b => `ðŸ¤ ${Utils.escapeHtml(b)}`).join(' �,· ') : '<em style="color:var(--text-light);">Non assign�f©</em>';
     const dateP = i.datePrevue
-      ? `Ã°Å¸â€œâ€¦ ${Utils.formatDate(i.datePrevue)}${i.heurePrevue ? ' ÃƒÂ  ' + Utils.escapeHtml(i.heurePrevue) : ''}`
+      ? `ðŸ�?o�?� ${Utils.formatDate(i.datePrevue)}${i.heurePrevue ? ' �f  ' + Utils.escapeHtml(i.heurePrevue) : ''}`
       : '';
 
     const frais = this.getFraisForIntervention(i.numero);
-    const badgeFrais = ((i.statut === "terminee" || i.statut === "validee") && !frais && !i.sansFrais) ? "<div style=\"margin-top:6px;padding:6px 8px;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;font-size:.78rem;color:#ea580c;font-weight:700;\">Ã¢Å¡Â Ã¯Â¸Â Frais ÃƒÂ  crÃƒÂ©er</div>" : "";
+    const badgeFrais = ((i.statut === "terminee" || i.statut === "validee") && !frais && !i.sansFrais) ? "<div style=\"margin-top:6px;padding:6px 8px;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;font-size:.78rem;color:#ea580c;font-weight:700;\">âš ï¸ Frais �f  cr�f©er</div>" : "";
     let fraisInline = '';
     if (frais && frais.part > 0) {
       fraisInline = `<div style="margin-top:6px;padding:6px 8px;background:#fef3c7;border-radius:6px;font-size:.78rem;">
-        Ã°Å¸Å¡â€” <strong>${frais.part.toFixed(2)} Ã¢â€šÂ¬</strong>
-        ${frais.economie > 0 ? ` Ã‚Â· Ã°Å¸â€™Â° Ãƒâ€°conomie : ${frais.economie.toFixed(2)} Ã¢â€šÂ¬` : ''}
+        ðŸš�?" <strong>${frais.part.toFixed(2)} â�?s¬</strong>
+        ${frais.economie > 0 ? ` �,· ðŸ�?T° �f�?�conomie : ${frais.economie.toFixed(2)} â�?s¬` : ''}
       </div>`;
     }
 
     const dons = this.getDonsForIntervention(i.numero);
     const donsInline = dons.length > 0
       ? `<div style="margin-top:6px;padding:6px 8px;background:#f3e8ff;border-radius:6px;font-size:.78rem;">
-          Ã°Å¸Å½Â <strong>Don : ${dons.reduce((s, d) => s + d.montantTotal, 0).toFixed(2)} Ã¢â€šÂ¬</strong>
+          ðŸŽ <strong>Don : ${dons.reduce((s, d) => s + d.montantTotal, 0).toFixed(2)} â�?s¬</strong>
         </div>`
       : '';
 
@@ -135,19 +135,19 @@ const Interventions = {
         <div class="adh-card-info">
           <div class="adh-card-name">
             <span class="adh-card-numero">${Utils.escapeHtml(i.numero)}</span>
-            ${Utils.escapeHtml(i.demandeur)} Ã¢â‚¬â€ ${Utils.escapeHtml(i.type)}${prio}
+            ${Utils.escapeHtml(i.demandeur)} â�,��?� ${Utils.escapeHtml(i.type)}${prio}
           </div>
           <div class="adh-card-details">
-            Ã°Å¸â€˜Â¤ ${Utils.escapeHtml(i.demandeur)}<br>
-            ${benev} ${dateP ? 'Ã‚Â· ' + dateP : ''}<br>
+            ðŸ�?~¤ ${Utils.escapeHtml(i.demandeur)}<br>
+            ${benev} ${dateP ? '�,· ' + dateP : ''}<br>
             <span class="badge ${st.badge}">${st.label}</span>
-            <span style="color:var(--text-light);">Ã‚Â· ${Utils.escapeHtml((i.description || '').substring(0, 50))}${i.description && i.description.length > 50 ? 'Ã¢â‚¬Â¦' : ''}</span>
+            <span style="color:var(--text-light);">�,· ${Utils.escapeHtml((i.description || '').substring(0, 50))}${i.description && i.description.length > 50 ? 'â�,�¦' : ''}</span>
           </div>
           ${fraisInline}${donsInline}${badgeFrais}
         </div>
         <div class="adh-card-actions">
-          <button class="adh-btn-edit" onclick="event.stopPropagation();Interventions.openForm(${i.id})">Ã¢Å“ÂÃ¯Â¸Â</button>
-          <button class="adh-btn-del" onclick="event.stopPropagation();Interventions.remove(${i.id})">Ã°Å¸â€”â€˜Ã¯Â¸Â</button>
+          <button class="adh-btn-edit" onclick="event.stopPropagation();Interventions.openForm(${i.id})">â�"ï¸</button>
+          <button class="adh-btn-del" onclick="event.stopPropagation();Interventions.remove(${i.id})">ðŸ�?"�?~ï¸</button>
         </div>
       </div>`;
   },
@@ -166,7 +166,7 @@ const Interventions = {
       document.getElementById('interventionFormTitle').textContent = 'Modifier ' + i.numero;
       document.getElementById('intEditId').value = i.id;
       document.getElementById('intAdherentId').value = i.adherentId || '';
-      document.getElementById('intType').value = i.type || 'Ã°Å¸â€ºÂ Ã¯Â¸Â Petit Bricolage';
+      document.getElementById('intType').value = i.type || 'ðŸ�?� ï¸ Petit Bricolage';
       document.getElementById('intPriorite').value = i.priorite || 'normale';
       document.getElementById('intDemandeur').value = i.demandeur || '';
       document.getElementById('intDescription').value = i.description || '';
@@ -195,11 +195,11 @@ const Interventions = {
     document.getElementById('intAdherentId').value = adh.id;
     document.getElementById('intDemandeur').value = `${adh.prenom} ${adh.nom}`;
     const adresse = [adh.adresse, adh.cp, adh.ville].filter(Boolean).join(', ');
-    const tel = adh.tel ? `TÃƒÂ©l : ${adh.tel}` : '';
+    const tel = adh.tel ? `T�f©l : ${adh.tel}` : '';
     if (adresse) {
-      document.getElementById('intDescription').value = `Adresse : ${adresse}${tel ? '\n' + tel : ''}\n\nDÃƒÂ©crire la demande...`;
+      document.getElementById('intDescription').value = `Adresse : ${adresse}${tel ? '\n' + tel : ''}\n\nD�f©crire la demande...`;
     }
-    document.getElementById('interventionFormTitle').textContent = `Nouvelle intervention Ã¢â‚¬â€ ${adh.prenom} ${adh.nom}`;
+    document.getElementById('interventionFormTitle').textContent = `Nouvelle intervention â�,��?� ${adh.prenom} ${adh.nom}`;
     document.getElementById('intType').focus();
   },
 
@@ -211,7 +211,7 @@ const Interventions = {
     document.getElementById('intDatePrevue').value = date || Utils.todayISO();
     if (heure) document.getElementById('intHeurePrevue').value = heure;
     document.getElementById('intStatut').value = 'planifiee';
-    document.getElementById('interventionFormTitle').textContent = `Nouvelle intervention Ã¢â‚¬â€ ${Utils.formatDate(date)}${heure ? ' ÃƒÂ  ' + heure : ''}`;
+    document.getElementById('interventionFormTitle').textContent = `Nouvelle intervention â�,��?� ${Utils.formatDate(date)}${heure ? ' �f  ' + heure : ''}`;
   },
 
   closeForm() { document.getElementById('interventionFormModal').classList.remove('active'); },
@@ -230,7 +230,7 @@ const Interventions = {
     const dl = document.getElementById('benevolesList');
     if (!dl) return;
     const benevoles = Storage.getAdherents().filter(a => 
-      a.type === 'BÃƒÂ©nÃƒÂ©vole' || (a.type === 'AdhÃƒÂ©rent bÃƒÂ©nÃƒÂ©ficiaire' && a.aussiBenevole === true)
+      a.type === 'B�f©n�f©vole' || (a.type === 'Adh�f©rent b�f©n�f©ficiaire' && a.aussiBenevole === true)
     );
     dl.innerHTML = benevoles.map(b => `<option value="${Utils.escapeHtml(b.prenom + ' ' + b.nom)}"></option>`).join('');
   },
@@ -314,7 +314,7 @@ const Interventions = {
        this._interventionCourante = i;
 
     const histo = autres.length > 0
-      ? `<div class="adh-detail-section"><h4>Historique du demandeur (${autres.length})</h4>${autres.slice(0, 3).map(a => `<p>${Utils.escapeHtml(a.numero)} Ã‚Â· ${Utils.formatDate(a.dateCreation)} Ã‚Â· ${a.type} Ã‚Â· <span class="badge ${this.STATUTS[a.statut].badge}">${this.STATUTS[a.statut].label}</span></p>`).join('')}</div>`
+      ? `<div class="adh-detail-section"><h4>Historique du demandeur (${autres.length})</h4>${autres.slice(0, 3).map(a => `<p>${Utils.escapeHtml(a.numero)} �,· ${Utils.formatDate(a.dateCreation)} �,· ${a.type} �,· <span class="badge ${this.STATUTS[a.statut].badge}">${this.STATUTS[a.statut].label}</span></p>`).join('')}</div>`
       : '';
 
     const frais = this.getFraisForIntervention(i.numero);
@@ -322,9 +322,9 @@ const Interventions = {
     if (frais && frais.part > 0 && !frais.incomplet) {
       fraisHTML = `
         <div class="adh-detail-section" style="background:#fffbeb;border:1px solid #fcd34d;">
-          <h4 style="color:#92400e;">Ã°Å¸â€™Â¶ Frais de route</h4>
+          <h4 style="color:#92400e;">ðŸ�?T¶ Frais de route</h4>
           <div style="background:#fff;border-radius:8px;padding:12px;margin-top:8px;">
-            <div style="font-size:1.1rem;font-weight:800;color:#b45309;margin-bottom:4px;">Ãƒâ‚¬ demander : ${frais.part.toFixed(2)} Ã¢â€šÂ¬</div>
+            <div style="font-size:1.1rem;font-weight:800;color:#b45309;margin-bottom:4px;">�f�,� demander : ${frais.part.toFixed(2)} â�?s¬</div>
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
             <div style="background:#fff;border-radius:8px;padding:10px;text-align:center;">
@@ -332,19 +332,19 @@ const Interventions = {
               <div style="font-size:1rem;font-weight:700;">${frais.kmIndividuel} km</div>
             </div>
             <div style="background:#fff;border-radius:8px;padding:10px;text-align:center;">
-              <div style="font-size:.72rem;color:var(--text-light);text-transform:uppercase;">Ãƒâ€°conomie</div>
-              <div style="font-size:1rem;font-weight:700;color:#16a34a;">${frais.economie.toFixed(2)} Ã¢â€šÂ¬</div>
+              <div style="font-size:.72rem;color:var(--text-light);text-transform:uppercase;">�f�?�conomie</div>
+              <div style="font-size:1rem;font-weight:700;color:#16a34a;">${frais.economie.toFixed(2)} â�?s¬</div>
             </div>
           </div>
           <div style="margin-top:10px;font-size:.8rem;color:var(--text-light);border-top:1px dashed #fcd34d;padding-top:8px;">
-            Ã°Å¸â€˜Â¤ ${Utils.escapeHtml(frais.benevole)} Ã‚Â· Ã°Å¸â€œâ€¦ ${Utils.formatDate(frais.date)}<br>
-            Ã°Å¸â€Â¢ ${Utils.escapeHtml(frais.numeroDeplacement)} (${frais.kmTotal} km Ã‚Â· ${frais.totalTournee.toFixed(2)} Ã¢â€šÂ¬)
+            ðŸ�?~¤ ${Utils.escapeHtml(frais.benevole)} �,· ðŸ�?o�?� ${Utils.formatDate(frais.date)}<br>
+            ðŸ�?�¢ ${Utils.escapeHtml(frais.numeroDeplacement)} (${frais.kmTotal} km �,· ${frais.totalTournee.toFixed(2)} â�?s¬)
           </div>
         </div>`;
     } else if (frais && frais.incomplet) {
-      fraisHTML = `<div class="adh-detail-section" style="background:#fef3c7;"><h4>Ã°Å¸â€™Â¶ Frais de route</h4><p style="font-size:.85rem;">RÃƒÂ©partition non calculÃƒÂ©e.</p></div>`;
+      fraisHTML = `<div class="adh-detail-section" style="background:#fef3c7;"><h4>ðŸ�?T¶ Frais de route</h4><p style="font-size:.85rem;">R�f©partition non calcul�f©e.</p></div>`;
     } else {
-      fraisHTML = `<div class="adh-detail-section" style="background:#f8fafc;"><h4>Ã°Å¸â€™Â¶ Frais de route</h4><p style="font-size:.85rem;color:var(--text-light);">Aucun frais liÃƒÂ©.</p></div>`;
+      fraisHTML = `<div class="adh-detail-section" style="background:#f8fafc;"><h4>ðŸ�?T¶ Frais de route</h4><p style="font-size:.85rem;color:var(--text-light);">Aucun frais li�f©.</p></div>`;
     }
 
     const dons = this.getDonsForIntervention(i.numero);
@@ -353,35 +353,35 @@ const Interventions = {
       const totalDons = dons.reduce((s, d) => s + d.montantTotal, 0);
       donsHTML = `
         <div class="adh-detail-section" style="background:#f3e8ff;border:1px solid #c4b5fd;">
-          <h4 style="color:#7c3aed;">Ã°Å¸Å½Â Dons de soutien</h4>
+          <h4 style="color:#7c3aed;">ðŸŽ Dons de soutien</h4>
           ${dons.map(d => `
             <p style="font-size:.85rem;margin-bottom:4px;display:flex;justify-content:space-between;">
-              <span>${Utils.formatDate(d.versements[0]?.date || '')} Ã‚Â· ${d.versements.length} versement(s)${d.recuGenere ? ' Ã‚Â· Ã°Å¸â€œâ€ž ReÃƒÂ§u ' + d.recuNumero : ''}</span>
-              <span style="color:#7c3aed;font-weight:700;">${d.montantTotal.toFixed(2)} Ã¢â€šÂ¬</span>
+              <span>${Utils.formatDate(d.versements[0]?.date || '')} �,· ${d.versements.length} versement(s)${d.recuGenere ? ' �,· ðŸ�?o�?z Re�f§u ' + d.recuNumero : ''}</span>
+              <span style="color:#7c3aed;font-weight:700;">${d.montantTotal.toFixed(2)} â�?s¬</span>
             </p>
           `).join('')}
           <div style="margin-top:8px;padding-top:8px;border-top:1px solid #c4b5fd;font-size:.85rem;">
-            Total dons : <strong style="color:#7c3aed;">${totalDons.toFixed(2)} Ã¢â€šÂ¬</strong>
+            Total dons : <strong style="color:#7c3aed;">${totalDons.toFixed(2)} â�?s¬</strong>
           </div>
         </div>`;
     }
 
     const boutonDon = i.adherentId
-      ? `<button class="btn" style="background:var(--purple);" onclick="Interventions.saisirDon(${i.id})">Ã°Å¸Å½Â Don reÃƒÂ§u</button>`
+      ? `<button class="btn" style="background:var(--purple);" onclick="Interventions.saisirDon(${i.id})">ðŸŽ Don re�f§u</button>`
       : '';
 
     const datePrevueAffiche = i.datePrevue
-      ? `Ã°Å¸â€œâ€¦ PrÃƒÂ©venue : ${Utils.formatDate(i.datePrevue)}${i.heurePrevue ? ' ÃƒÂ  ' + Utils.escapeHtml(i.heurePrevue) : ''}`
+      ? `ðŸ�?o�?� Pr�f©venue : ${Utils.formatDate(i.datePrevue)}${i.heurePrevue ? ' �f  ' + Utils.escapeHtml(i.heurePrevue) : ''}`
       : '';
     const dateRealiseeAffiche = i.dateRealisee
-      ? `Ã¢Å“â€¦ RÃƒÂ©alisÃƒÂ©e le : ${Utils.formatDate(i.dateRealisee)}${i.heureRealisee ? ' ÃƒÂ  ' + Utils.escapeHtml(i.heureRealisee) : ''}`
+      ? `â�"�?� R�f©alis�f©e le : ${Utils.formatDate(i.dateRealisee)}${i.heureRealisee ? ' �f  ' + Utils.escapeHtml(i.heureRealisee) : ''}`
       : '';
 
     document.getElementById('interventionDetailBody').innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding-bottom:14px;border-bottom:1px solid var(--border);margin-bottom:16px;">
         <div>
-          <div style="font-size:1.25rem;font-weight:800;">${Utils.escapeHtml(i.numero)} Ã‚Â· ${Utils.escapeHtml(i.demandeur)}</div>
-          <div style="color:var(--text-light);font-size:.85rem;">${Utils.escapeHtml(i.type)} Ã‚Â· CrÃƒÂ©ÃƒÂ©e le ${Utils.formatDate(i.dateCreation)}</div>
+          <div style="font-size:1.25rem;font-weight:800;">${Utils.escapeHtml(i.numero)} �,· ${Utils.escapeHtml(i.demandeur)}</div>
+          <div style="color:var(--text-light);font-size:.85rem;">${Utils.escapeHtml(i.type)} �,· Cr�f©�f©e le ${Utils.formatDate(i.dateCreation)}</div>
         </div>
         <div style="text-align:right;">
           <div class="badge ${st.badge}" style="font-size:.85rem;padding:5px 12px;">${st.label}</div>
@@ -391,11 +391,11 @@ const Interventions = {
       ${fraisHTML}
       ${donsHTML}
       <div class="adh-detail-section"><h4>Service</h4><p><strong>${Utils.escapeHtml(i.type)}</strong></p></div>
-      <div class="adh-detail-section"><h4>Demandeur</h4><p>Ã°Å¸â€˜Â¤ ${Utils.escapeHtml(i.demandeur)} <button class="btn" style="padding:2px 8px;font-size:.75rem;background:var(--info);margin-left:6px;" onclick="Interventions.messageContact('${Utils.escapeHtml(i.demandeur)}', Interventions._interventionCourante)" title="Envoyer un message">Ã¢Å“â€°Ã¯Â¸Â</button></p></div>
+      <div class="adh-detail-section"><h4>Demandeur</h4><p>ðŸ�?~¤ ${Utils.escapeHtml(i.demandeur)} <button class="btn" style="padding:2px 8px;font-size:.75rem;background:var(--info);margin-left:6px;" onclick="Interventions.messageContact('${Utils.escapeHtml(i.demandeur)}', Interventions._interventionCourante)" title="Envoyer un message">â�"�?�ï¸</button></p></div>
       <div class="adh-detail-section"><h4>Description</h4><p style="white-space:pre-wrap;">${Utils.escapeHtml(i.description)}</p></div>
       <div class="adh-detail-section">
         <h4>Assignation</h4>
-        <p>BÃƒÂ©nÃƒÂ©vole${benevListe.length > 1 ? 's' : ''} : ${benevListe.length > 0 ? benevListe.map(b => Utils.escapeHtml(b)).join(' Ã‚Â· ') : '<em>Non assignÃƒÂ©</em>'}${benevListe.length > 0 ? ` <button class="btn" style="padding:2px 8px;font-size:.75rem;background:var(--info);margin-left:6px;" onclick="Interventions.messageContact('${Utils.escapeHtml(benevListe[0])}', Interventions._interventionCourante)" title="Envoyer un message">Ã¢Å“â€°Ã¯Â¸Â</button>` : ''}</p>
+        <p>B�f©n�f©vole${benevListe.length > 1 ? 's' : ''} : ${benevListe.length > 0 ? benevListe.map(b => Utils.escapeHtml(b)).join(' �,· ') : '<em>Non assign�f©</em>'}${benevListe.length > 0 ? ` <button class="btn" style="padding:2px 8px;font-size:.75rem;background:var(--info);margin-left:6px;" onclick="Interventions.messageContact('${Utils.escapeHtml(benevListe[0])}', Interventions._interventionCourante)" title="Envoyer un message">â�"�?�ï¸</button>` : ''}</p>
         ${datePrevueAffiche ? `<p>${datePrevueAffiche}</p>` : ''}
         ${dateRealiseeAffiche ? `<p>${dateRealiseeAffiche}</p>` : ''}
       </div>
@@ -403,19 +403,19 @@ const Interventions = {
       ${histo}
       <div class="adh-detail-actions">
         ${boutonDon}
-        <button class="btn btn-secondary" onclick="Interventions.closeDetail();Interventions.openForm(${i.id});">Ã¢Å“ÂÃ¯Â¸Â Modifier</button>
-        <button class="btn" style="background:#f97316;" onclick="Interventions.assignerBenevoles(${i.id})">Ã°Å¸â€˜Â¤ Assigner</button>
-        ${((i.statut === "terminee" || i.statut === "validee") && !this.getFraisForIntervention(i.numero)) ? `<button class="btn" style="background:${i.sansFrais ? "#16a34a" : "#64748b"};" onclick="Interventions.toggleSansFrais(${i.id})">${i.sansFrais ? "Ã¢â€ Â©Ã¯Â¸Â Remettre frais" : "Ã°Å¸Å¡Â« Pas de frais"}</button>` : ""}
-        ${i.statut !== 'terminee' ? `<button class="btn btn-success" onclick="Interventions.changerStatut(${i.id}, 'terminee')">Ã¢Å“â€¦ TerminÃƒÂ©e</button>` : ''}
-        ${i.statut === 'demande' ? `<button class="btn" style="background:var(--warning);" onclick="Interventions.changerStatut(${i.id}, 'planifiee')">Ã°Å¸â€œâ€¦ Planifier</button>` : ''}
-        ${i.statut === 'planifiee' ? `<button class="btn" style="background:var(--accent);" onclick="Interventions.changerStatut(${i.id}, 'en_cours')">Ã¢â€“Â¶Ã¯Â¸Â DÃƒÂ©marrer</button>` : ''}
-        <button class="btn btn-danger" onclick="Interventions.remove(${i.id})">Ã°Å¸â€”â€˜Ã¯Â¸Â Supprimer</button>
+        <button class="btn btn-secondary" onclick="Interventions.closeDetail();Interventions.openForm(${i.id});">â�"ï¸ Modifier</button>
+        <button class="btn" style="background:#f97316;" onclick="Interventions.assignerBenevoles(${i.id})">ðŸ�?~¤ Assigner</button>
+        ${((i.statut === "terminee" || i.statut === "validee") && !this.getFraisForIntervention(i.numero)) ? `<button class="btn" style="background:${i.sansFrais ? "#16a34a" : "#64748b"};" onclick="Interventions.toggleSansFrais(${i.id})">${i.sansFrais ? "â�?�©ï¸ Remettre frais" : "ðŸš« Pas de frais"}</button>` : ""}
+        ${i.statut !== 'terminee' ? `<button class="btn btn-success" onclick="Interventions.changerStatut(${i.id}, 'terminee')">â�"�?� Termin�f©e</button>` : ''}
+        ${i.statut === 'demande' ? `<button class="btn" style="background:var(--warning);" onclick="Interventions.changerStatut(${i.id}, 'planifiee')">ðŸ�?o�?� Planifier</button>` : ''}
+        ${i.statut === 'planifiee' ? `<button class="btn" style="background:var(--accent);" onclick="Interventions.changerStatut(${i.id}, 'en_cours')">â�?"¶ï¸ D�f©marrer</button>` : ''}
+        <button class="btn btn-danger" onclick="Interventions.remove(${i.id})">ðŸ�?"�?~ï¸ Supprimer</button>
       </div>`;
     document.getElementById('interventionDetailModal').classList.add('active');
   },
 
   // ============================================================
-  // MODALES DÃƒâ€°TAIL (cartes cliquables)
+  // MODALES D�f�?�TAIL (cartes cliquables)
   // ============================================================
 
   _openStatutModal(statut, titre, color, bg, border) {
@@ -432,13 +432,13 @@ const Interventions = {
       </div>
 
       ${list.length === 0
-        ? '<div class="empty-state">Aucune intervention dans cette catÃƒÂ©gorie.</div>'
+        ? '<div class="empty-state">Aucune intervention dans cette cat�f©gorie.</div>'
         : `<div style="max-height:440px;overflow-y:auto;">
             ${list.map(i => {
               const st = this.STATUTS[i.statut] || { label: i.statut, color: '#64748b' };
               const prio = i.priorite === 'urgente' ? ' <span class="badge badge-danger" style="font-size:.6rem;">URGENT</span>' : '';
-              const dateP = i.datePrevue ? Utils.formatDate(i.datePrevue) : 'Ã¢â‚¬â€';
-              const benev = i.benevole || '<em style="color:var(--text-light);">Non assignÃƒÂ©</em>';
+              const dateP = i.datePrevue ? Utils.formatDate(i.datePrevue) : 'â�,��?�';
+              const benev = i.benevole || '<em style="color:var(--text-light);">Non assign�f©</em>';
               return `
                 <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#fff;border:1px solid var(--border);border-left:4px solid ${st.color};border-radius:8px;margin-bottom:6px;cursor:pointer;"
                      onclick="Interventions.closeStatutModal();Interventions.openDetail(${i.id});">
@@ -448,8 +448,8 @@ const Interventions = {
                       ${Utils.escapeHtml(i.type)}${prio}
                     </div>
                     <div style="font-size:.76rem;color:var(--text-light);margin-top:2px;">
-                      Ã°Å¸â€˜Â¤ ${Utils.escapeHtml(i.demandeur)} Ã‚Â· Ã°Å¸Â¤Â ${benev}<br>
-                      Ã°Å¸â€œâ€¦ ${dateP}
+                      ðŸ�?~¤ ${Utils.escapeHtml(i.demandeur)} �,· ðŸ¤ ${benev}<br>
+                      ðŸ�?o�?� ${dateP}
                     </div>
                   </div>
                   <span class="badge" style="background:${st.color}22;color:${st.color};font-size:.68rem;flex-shrink:0;">${st.label}</span>
@@ -460,10 +460,10 @@ const Interventions = {
     document.getElementById('intStatutModal').classList.add('active');
   },
 
-  openEnCoursModal() { this._openStatutModal('en_cours', 'Ã¢â€“Â¶Ã¯Â¸Â En cours', '#f59e0b', '#fffbeb', '#fcd34d'); },
-  openPlanifieesModal() { this._openStatutModal('planifiee', 'Ã°Å¸â€œâ€¦ PlanifiÃƒÂ©es', '#f59e0b', '#fffbeb', '#fcd34d'); },
-  openTermineesModal() { this._openStatutModal('terminee', 'Ã¢Å“â€¦ TerminÃƒÂ©es', '#16a34a', '#f0fdf4', '#86efac'); },
-  openTotalModal() { this._openStatutModal('total', 'Ã°Å¸â€œÅ  Toutes les interventions', '#8b5cf6', '#faf5ff', '#c4b5fd'); },
+  openEnCoursModal() { this._openStatutModal('en_cours', 'â�?"¶ï¸ En cours', '#f59e0b', '#fffbeb', '#fcd34d'); },
+  openPlanifieesModal() { this._openStatutModal('planifiee', 'ðŸ�?o�?� Planifi�f©es', '#f59e0b', '#fffbeb', '#fcd34d'); },
+  openTermineesModal() { this._openStatutModal('terminee', 'â�"�?� Termin�f©es', '#16a34a', '#f0fdf4', '#86efac'); },
+  openTotalModal() { this._openStatutModal('total', 'ðŸ�?oŠ Toutes les interventions', '#8b5cf6', '#faf5ff', '#c4b5fd'); },
 
   closeStatutModal() {
     document.getElementById('intStatutModal').classList.remove('active');
@@ -471,7 +471,7 @@ const Interventions = {
 
   saisirDon(interventionId) {
     const i = this.getAll().find(x => x.id === interventionId);
-    if (!i || !i.adherentId) { alert('Cette intervention n\'est pas liÃƒÂ©e ÃƒÂ  un contact.'); return; }
+    if (!i || !i.adherentId) { alert('Cette intervention n\'est pas li�f©e �f  un contact.'); return; }
     if (typeof Dons === 'undefined') { alert('Module Dons non disponible.'); return; }
     if (typeof Router !== 'undefined' && Router.mountIfNeeded && Router.registry['dons']) {
       Router.mountIfNeeded('dons', Router.registry['dons']);
@@ -480,7 +480,7 @@ const Interventions = {
     Dons.openForm(null, { adherentId: i.adherentId, interventionNumero: i.numero });
   },
   messageContact(nom, intervention) {
-    if (!nom) { alert('Aucun nom ÃƒÂ  rechercher.'); return; }
+    if (!nom) { alert('Aucun nom �f  rechercher.'); return; }
     let ctx = null;
     if (intervention) {
       const num = intervention.numero || '';
@@ -489,7 +489,7 @@ const Interventions = {
       ctx = {
         datePrevue: intervention.datePrevue || '',
         heurePrevue: intervention.heurePrevue || '',
-        intervention: num + (dem ? ' Ã‚Â· ' + dem : '') + (typ ? ' Ã‚Â· ' + typ : ''),
+        intervention: num + (dem ? ' �,· ' + dem : '') + (typ ? ' �,· ' + typ : ''),
         type: typ
       };
     }
@@ -504,11 +504,11 @@ const Interventions = {
       return complet === nomCherche || inverse === nomCherche;
     });
     if (!contact) {
-      alert('Aucun contact trouvÃƒÂ© dans l\'annuaire pour : ' + nom);
+      alert('Aucun contact trouv�f© dans l\'annuaire pour : ' + nom);
       return;
     }
     if (!contact.email && !contact.tel) {
-      alert('Ce contact n\'a ni email ni tÃƒÂ©lÃƒÂ©phone.');
+      alert('Ce contact n\'a ni email ni t�f©l�f©phone.');
       return;
     }
         this.closeDetail();
@@ -534,7 +534,7 @@ const Interventions = {
   exportCSV() {
     const list = this.getAll();
     if (list.length === 0) { alert('Aucune intervention.'); return; }
-    const headers = ['NumÃƒÂ©ro','Date crÃƒÂ©ation','Type','PrioritÃƒÂ©','Statut','Demandeur','BÃƒÂ©nÃƒÂ©vole','Date prÃƒÂ©vue','Heure prÃƒÂ©vue','Date rÃƒÂ©alisÃƒÂ©e','Heure rÃƒÂ©alisÃƒÂ©e','Description','Notes','Frais bÃƒÂ©nÃƒÂ©ficiaire','Ãƒâ€°conomie','Dons reÃƒÂ§us'];
+    const headers = ['Num�f©ro','Date cr�f©ation','Type','Priorit�f©','Statut','Demandeur','B�f©n�f©vole','Date pr�f©vue','Heure pr�f©vue','Date r�f©alis�f©e','Heure r�f©alis�f©e','Description','Notes','Frais b�f©n�f©ficiaire','�f�?�conomie','Dons re�f§us'];
     let csv = headers.join(';') + '\n';
     list.forEach(i => {
       const st = this.STATUTS[i.statut] || { label: i.statut };
@@ -561,8 +561,8 @@ const Interventions = {
         <div class="view-header" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;">
           <div><h1>Interventions</h1><p>Carnet de mission</p></div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn btn-ghost" onclick="Interventions.exportCSV()">Ã°Å¸â€œÂ¥ Export CSV</button>
-            <button class="btn" onclick="Missions.nouvelleIntervention()">Ã¢Å¾â€¢ Nouvelle intervention</button>
+            <button class="btn btn-ghost" onclick="Interventions.exportCSV()">ðŸ�?o¥ Export CSV</button>
+            <button class="btn" onclick="Missions.nouvelleIntervention()">âž�?� Nouvelle intervention</button>
           </div>
         </div>
         <div class="stats-grid">
@@ -571,13 +571,13 @@ const Interventions = {
             <div class="stat-value" id="intStatEnCours">0</div>
             <div class="stat-sub">Missions actives</div>
           </div>
-          <div class="stat-card orange clickable" onclick="Interventions.openPlanifieesModal()" title="Voir les interventions planifiÃƒÂ©es">
-            <div class="stat-label">PlanifiÃƒÂ©es</div>
+          <div class="stat-card orange clickable" onclick="Interventions.openPlanifieesModal()" title="Voir les interventions planifi�f©es">
+            <div class="stat-label">Planifi�f©es</div>
             <div class="stat-value" id="intStatPlanifiees">0</div>
-            <div class="stat-sub">Ãƒâ‚¬ venir</div>
+            <div class="stat-sub">�f�,� venir</div>
           </div>
-          <div class="stat-card success clickable" onclick="Interventions.openTermineesModal()" title="Voir les interventions terminÃƒÂ©es">
-            <div class="stat-label">TerminÃƒÂ©es</div>
+          <div class="stat-card success clickable" onclick="Interventions.openTermineesModal()" title="Voir les interventions termin�f©es">
+            <div class="stat-label">Termin�f©es</div>
             <div class="stat-value" id="intStatTerminees">0</div>
             <div class="stat-sub">Toutes</div>
           </div>
@@ -588,26 +588,26 @@ const Interventions = {
           </div>
         </div>
         <div class="card" style="padding:14px;">
-          <input type="text" id="intSearch" placeholder="Ã°Å¸â€Â Rechercher" oninput="Interventions.render()" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:.92rem;">
+          <input type="text" id="intSearch" placeholder="ðŸ�?� Rechercher" oninput="Interventions.render()" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:.92rem;">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
             <select id="intFilterType" onchange="Interventions.render()" style="padding:9px;border:1px solid var(--border);border-radius:8px;font-size:.88rem;">
               <option value="">Tous types</option>
-              <option value="Ã°Å¸â€ºÂ Ã¯Â¸Â Petit Bricolage">Ã°Å¸â€ºÂ Ã¯Â¸Â Petit Bricolage</option>
-              <option value="Ã°Å¸Å’Â¿ Entretien des accÃƒÂ¨s">Ã°Å¸Å’Â¿ Entretien des accÃƒÂ¨s</option>
-              <option value="Ã°Å¸â€œÂ¦ Manutention & Livraison">Ã°Å¸â€œÂ¦ Manutention & Livraison</option>
-              <option value="Ã°Å¸â€™Â» NumÃƒÂ©rique">Ã°Å¸â€™Â» NumÃƒÂ©rique</option>
-              <option value="Ã¢Å¡Â¡ Ãƒâ€°lectromÃƒÂ©nager">Ã¢Å¡Â¡ Ãƒâ€°lectromÃƒÂ©nager</option>
-              <option value="Ã°Å¸ÂÅ½ Cueillette solidaire">Ã°Å¸ÂÅ½ Cueillette solidaire</option>
+              <option value="ðŸ�?� ï¸ Petit Bricolage">ðŸ�?� ï¸ Petit Bricolage</option>
+              <option value="ðŸ�'¿ Entretien des acc�f¨s">ðŸ�'¿ Entretien des acc�f¨s</option>
+              <option value="ðŸ�?o¦ Manutention & Livraison">ðŸ�?o¦ Manutention & Livraison</option>
+              <option value="ðŸ�?T» Num�f©rique">ðŸ�?T» Num�f©rique</option>
+              <option value="âš¡ �f�?�lectrom�f©nager">âš¡ �f�?�lectrom�f©nager</option>
+              <option value="ðŸŽ Cueillette solidaire">ðŸŽ Cueillette solidaire</option>
               <option value="Autre">Autre</option>
             </select>
             <select id="intFilterStatut" onchange="Interventions.render()" style="padding:9px;border:1px solid var(--border);border-radius:8px;font-size:.88rem;">
               <option value="">Tous statuts</option>
               <option value="demande">Demandes</option>
-              <option value="planifiee">PlanifiÃƒÂ©es</option>
+              <option value="planifiee">Planifi�f©es</option>
               <option value="en_cours">En cours</option>
-              <option value="terminee">TerminÃƒÂ©es</option>
-              <option value="annulee">AnnulÃƒÂ©es</option>
-              <option value="sans_frais">Ã°Å¸Å¡â€” Frais ÃƒÂ  crÃƒÂ©er</option>
+              <option value="terminee">Termin�f©es</option>
+              <option value="annulee">Annul�f©es</option>
+              <option value="sans_frais">ðŸš�?" Frais �f  cr�f©er</option>
             </select>
           </div>
           <div style="margin-top:10px;font-size:.82rem;color:var(--text-light);" id="intCount">0 intervention</div>
@@ -632,17 +632,17 @@ const Interventions = {
                 <div class="form-group">
                   <label>Type *</label>
                   <select id="intType" required>
-                    <option value="Ã°Å¸â€ºÂ Ã¯Â¸Â Petit Bricolage">Ã°Å¸â€ºÂ Ã¯Â¸Â Petit Bricolage</option>
-                    <option value="Ã°Å¸Å’Â¿ Entretien des accÃƒÂ¨s">Ã°Å¸Å’Â¿ Entretien des accÃƒÂ¨s</option>
-                    <option value="Ã°Å¸â€œÂ¦ Manutention & Livraison">Ã°Å¸â€œÂ¦ Manutention & Livraison</option>
-                    <option value="Ã°Å¸â€™Â» NumÃƒÂ©rique">Ã°Å¸â€™Â» NumÃƒÂ©rique</option>
-                    <option value="Ã¢Å¡Â¡ Ãƒâ€°lectromÃƒÂ©nager">Ã¢Å¡Â¡ Ãƒâ€°lectromÃƒÂ©nager</option>
-                    <option value="Ã°Å¸ÂÅ½ Cueillette solidaire">Ã°Å¸ÂÅ½ Cueillette solidaire</option>
+                    <option value="ðŸ�?� ï¸ Petit Bricolage">ðŸ�?� ï¸ Petit Bricolage</option>
+                    <option value="ðŸ�'¿ Entretien des acc�f¨s">ðŸ�'¿ Entretien des acc�f¨s</option>
+                    <option value="ðŸ�?o¦ Manutention & Livraison">ðŸ�?o¦ Manutention & Livraison</option>
+                    <option value="ðŸ�?T» Num�f©rique">ðŸ�?T» Num�f©rique</option>
+                    <option value="âš¡ �f�?�lectrom�f©nager">âš¡ �f�?�lectrom�f©nager</option>
+                    <option value="ðŸŽ Cueillette solidaire">ðŸŽ Cueillette solidaire</option>
                     <option value="Autre">Autre</option>
                   </select>
                 </div>
                 <div class="form-group">
-                  <label>PrioritÃƒÂ©</label>
+                  <label>Priorit�f©</label>
                   <select id="intPriorite">
                     <option value="normale">Normale</option>
                     <option value="urgente">Urgente</option>
@@ -660,7 +660,7 @@ const Interventions = {
               </div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                 <div class="form-group">
-                  <label>BÃƒÂ©nÃƒÂ©vole</label>
+                  <label>B�f©n�f©vole</label>
                   <input type="text" id="intBenevole" list="benevolesList" placeholder="Nom">
                   <datalist id="benevolesList"></datalist>
                 </div>
@@ -668,24 +668,24 @@ const Interventions = {
                   <label>Statut</label>
                   <select id="intStatut">
                     <option value="demande">Demande</option>
-                    <option value="planifiee">PlanifiÃƒÂ©e</option>
+                    <option value="planifiee">Planifi�f©e</option>
                     <option value="en_cours">En cours</option>
-                    <option value="terminee">TerminÃƒÂ©e</option>
-                    <option value="annulee">AnnulÃƒÂ©e</option>
+                    <option value="terminee">Termin�f©e</option>
+                    <option value="annulee">Annul�f©e</option>
                   </select>
               </div>
               </div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                <div class="form-group"><label>Date prÃƒÂ©vue</label><input type="date" id="intDatePrevue"></div>
-                <div class="form-group"><label>Heure prÃƒÂ©vue</label><input type="time" id="intHeurePrevue"></div>
+                <div class="form-group"><label>Date pr�f©vue</label><input type="date" id="intDatePrevue"></div>
+                <div class="form-group"><label>Heure pr�f©vue</label><input type="time" id="intHeurePrevue"></div>
               </div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                <div class="form-group"><label>Date rÃƒÂ©alisÃƒÂ©e</label><input type="date" id="intDateRealisee"></div>
-                <div class="form-group"><label>Heure rÃƒÂ©alisÃƒÂ©e</label><input type="time" id="intHeureRealisee"></div>
+                <div class="form-group"><label>Date r�f©alis�f©e</label><input type="date" id="intDateRealisee"></div>
+                <div class="form-group"><label>Heure r�f©alis�f©e</label><input type="time" id="intHeureRealisee"></div>
               </div>
               <div class="form-group"><label>Notes</label><textarea id="intNotes" rows="2"></textarea></div>
               <div style="display:flex;gap:10px;margin-top:14px;">
-                <button type="submit" class="btn" style="flex:1;">Ã°Å¸â€™Â¾ Enregistrer</button>
+                <button type="submit" class="btn" style="flex:1;">ðŸ�?T¾ Enregistrer</button>
                 <button type="button" class="btn btn-ghost" onclick="Interventions.closeForm()">Annuler</button>
               </div>
             </form>
@@ -707,7 +707,7 @@ const Interventions = {
       <div class="modal" id="intStatutModal">
         <div class="modal-content" style="max-width:640px;">
           <div class="modal-header">
-            <h2 id="intModalTitle">DÃƒÂ©tail</h2>
+            <h2 id="intModalTitle">D�f©tail</h2>
             <button class="close-btn" onclick="Interventions.closeStatutModal()">&times;</button>
           </div>
           <div class="modal-body" id="intModalBody"></div>
@@ -730,8 +730,8 @@ const Interventions = {
 Router.register({
   view: 'interventions',
   title: 'Interventions',
-  icon: 'Ã°Å¸â€ºÂ Ã¯Â¸Â',
-  section: 'ActivitÃƒÂ©',
+  icon: 'ðŸ�?� ï¸',
+  section: 'Activit�f©',
   order: 2,
   getViewHTML: () => Interventions.getViewHTML(),
   getModalsHTML: () => Interventions.getModalsHTML(),
