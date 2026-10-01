@@ -5,15 +5,10 @@
 const Interventions = {
 
   STATUTS: {
-    demande:   { label: 'À prendre en charge', badge: 'badge-neutral', color: '#64748b' },
-    prise:     { label: 'Prise en charge',     badge: 'badge-warning', color: '#f59e0b' },
-    planifiee: { label: 'Planifiée',           badge: 'badge-warning', color: '#f59e0b' },
-    en_cours:  { label: 'En cours',            badge: 'badge-info',    color: '#0ea5e9' },
-    a_valider: { label: 'À valider',           badge: 'badge-warning', color: '#eab308' },
-    relancer:  { label: 'À relancer',          badge: 'badge-warning', color: '#8b5cf6' },
-    validee:   { label: 'Validée',             badge: 'badge-success', color: '#16a34a' },
-    terminee:  { label: 'Validée',             badge: 'badge-success', color: '#16a34a' },
-    annulee:   { label: 'Annulée',             badge: 'badge-danger',  color: '#dc2626' }
+    demande:   { label: 'Demande',    badge: 'badge-neutral', color: '#64748b' },
+    planifiee: { label: 'Planifiée',  badge: 'badge-warning', color: '#f59e0b' },
+    terminee:  { label: 'Terminée',   badge: 'badge-success', color: '#16a34a' },
+    annulee:   { label: 'Annulée',    badge: 'badge-danger',  color: '#dc2626' }
   },
 
   getAll() { return Storage.getInterventions(); },
@@ -59,6 +54,19 @@ const Interventions = {
     return Dons.getAll().filter(d => d.interventionNumero === numero);
   },
 
+  _estPassee(i) {
+    if (!i.datePrevue) return false;
+    const now = new Date();
+    const aujourdhui = Utils.todayISO();
+    if (i.datePrevue < aujourdhui) return true;
+    if (i.datePrevue > aujourdhui) return false;
+    if (!i.heurePrevue) return false;
+    const parts = i.heurePrevue.split(':');
+    const heurePrevue = new Date();
+    heurePrevue.setHours(Number(parts[0]), Number(parts[1]), 0, 0);
+    return heurePrevue < now;
+  },
+
   getFiltered() {
     const q = (document.getElementById('intSearch').value || '').toLowerCase();
     const type = document.getElementById('intFilterType').value;
@@ -70,8 +78,11 @@ const Interventions = {
       }
       if (type && i.type !== type) return false;
       if (statut === "sans_frais") {
-        if (!((i.statut === "terminee" || i.statut === "validee") && !this.getFraisForIntervention(i.numero) && !i.sansFrais)) return false;
+        if (!((i.statut === "terminee") && !this.getFraisForIntervention(i.numero) && !i.sansFrais)) return false;
+      } else if (statut === "a_valider") {
+        if (!(i.statut === "planifiee" && this._estPassee(i))) return false;
       } else if (statut && i.statut !== statut) return false;
+      if (!statut && i.statut === 'annulee') return false;
       return true;
     });
   },
@@ -86,7 +97,7 @@ const Interventions = {
     const elPl = document.getElementById('intStatPlanifiees');
     const elTe = document.getElementById('intStatTerminees');
     const elTo = document.getElementById('intStatTotal');
-    if (elEC) elEC.textContent = all.filter(i => i.statut === 'en_cours').length;
+    if (elEC) elEC.textContent = all.filter(i => i.statut === 'demande').length;
     if (elPl) elPl.textContent = all.filter(i => i.statut === 'planifiee').length;
     if (elTe) elTe.textContent = all.filter(i => i.statut === 'terminee').length;
     if (elTo) elTo.textContent = all.length;
@@ -99,8 +110,11 @@ const Interventions = {
       return;
     }
 
-    const ordre = { en_cours: 0, planifiee: 1, demande: 2, terminee: 3, annulee: 4 };
-    list.sort((a, b) => (ordre[a.statut] || 9) - (ordre[b.statut] || 9));
+    list.sort((a, b) => {
+      const da = (a.datePrevue || '9999-12-31') + ' ' + (a.heurePrevue || '99:99');
+      const db = (b.datePrevue || '9999-12-31') + ' ' + (b.heurePrevue || '99:99');
+      return da.localeCompare(db);
+    });
     container.innerHTML = list.map(i => this.renderCard(i)).join('');
   },
 
@@ -114,7 +128,7 @@ const Interventions = {
       : '';
 
     const frais = this.getFraisForIntervention(i.numero);
-    const badgeFrais = ((i.statut === "terminee" || i.statut === "validee") && !frais && !i.sansFrais) ? "<div style=\"margin-top:6px;padding:6px 8px;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;font-size:.78rem;color:#ea580c;font-weight:700;\">⚠️ Frais à créer</div>" : "";
+    const badgeFrais = ((i.statut === "terminee") && !frais && !i.sansFrais) ? "<div style=\"margin-top:6px;padding:6px 8px;background:#fff7ed;border:1px solid #fed7aa;border-radius:6px;font-size:.78rem;color:#ea580c;font-weight:700;\">⚠️ Frais à créer</div>" : "";
     let fraisInline = '';
     if (frais && frais.part > 0) {
       fraisInline = `<div style="margin-top:6px;padding:6px 8px;background:#fef3c7;border-radius:6px;font-size:.78rem;">
@@ -405,10 +419,10 @@ const Interventions = {
         ${boutonDon}
         <button class="btn btn-secondary" onclick="Interventions.closeDetail();Interventions.openForm(${i.id});">✏️ Modifier</button>
         <button class="btn" style="background:#f97316;" onclick="Interventions.assignerBenevoles(${i.id})">👤 Assigner</button>
-        ${((i.statut === "terminee" || i.statut === "validee") && !this.getFraisForIntervention(i.numero)) ? `<button class="btn" style="background:${i.sansFrais ? "#16a34a" : "#64748b"};" onclick="Interventions.toggleSansFrais(${i.id})">${i.sansFrais ? "↩️ Remettre frais" : "🚫 Pas de frais"}</button>` : ""}
+        ${((i.statut === "terminee") && !this.getFraisForIntervention(i.numero)) ? `<button class="btn" style="background:${i.sansFrais ? "#16a34a" : "#64748b"};" onclick="Interventions.toggleSansFrais(${i.id})">${i.sansFrais ? "↩️ Remettre frais" : "🚫 Pas de frais"}</button>` : ""}
         ${i.statut !== 'terminee' ? `<button class="btn btn-success" onclick="Interventions.changerStatut(${i.id}, 'terminee')">✅ Terminée</button>` : ''}
         ${i.statut === 'demande' ? `<button class="btn" style="background:var(--warning);" onclick="Interventions.changerStatut(${i.id}, 'planifiee')">📅 Planifier</button>` : ''}
-        ${i.statut === 'planifiee' ? `<button class="btn" style="background:var(--accent);" onclick="Interventions.changerStatut(${i.id}, 'en_cours')">▶️ Démarrer</button>` : ''}
+        
         <button class="btn btn-danger" onclick="Interventions.remove(${i.id})">🗑️ Supprimer</button>
       </div>`;
     document.getElementById('interventionDetailModal').classList.add('active');
@@ -460,7 +474,7 @@ const Interventions = {
     document.getElementById('intStatutModal').classList.add('active');
   },
 
-  openEnCoursModal() { this._openStatutModal('en_cours', '▶️ En cours', '#f59e0b', '#fffbeb', '#fcd34d'); },
+  openEnCoursModal() { this._openStatutModal('demande', 'Demandes', '#64748b', '#f1f5f9', '#cbd5e1'); },
   openPlanifieesModal() { this._openStatutModal('planifiee', '📅 Planifiées', '#f59e0b', '#fffbeb', '#fcd34d'); },
   openTermineesModal() { this._openStatutModal('terminee', '✅ Terminées', '#16a34a', '#f0fdf4', '#86efac'); },
   openTotalModal() { this._openStatutModal('total', '📊 Toutes les interventions', '#8b5cf6', '#faf5ff', '#c4b5fd'); },
@@ -604,8 +618,9 @@ const Interventions = {
               <option value="">Tous statuts</option>
               <option value="demande">Demandes</option>
               <option value="planifiee">Planifiées</option>
-              <option value="en_cours">En cours</option>
+              
               <option value="terminee">Terminées</option>
+              <option value="a_valider">⏳ À valider</option>
               <option value="annulee">Annulées</option>
               <option value="sans_frais">🚗 Frais à créer</option>
             </select>
@@ -669,7 +684,7 @@ const Interventions = {
                   <select id="intStatut">
                     <option value="demande">Demande</option>
                     <option value="planifiee">Planifiée</option>
-                    <option value="en_cours">En cours</option>
+                    
                     <option value="terminee">Terminée</option>
                     <option value="annulee">Annulée</option>
                   </select>

@@ -181,6 +181,8 @@ const Missions = {
       boutons = `
         <button class="btn" style="padding:8px 14px;font-size:.82rem;background:#16a34a;flex:1;" onclick="Missions.openValiderModal(${i.id})">✔️ Valider</button>
       `;
+    } else if (i.statut === 'demande') {
+      boutons = `<button class="btn" style="padding:8px 14px;font-size:.82rem;background:#8b5cf6;flex:1;" onclick="Missions.openPlanifierModal(${i.id})">📅 Planifier</button>`;
     } else if (i.statut === 'planifiee') {
       boutons = `
         <button class="btn btn-success" style="padding:8px 14px;font-size:.82rem;flex:1;" onclick="Missions.openFaitModal(${i.id})">✅ Fait</button>
@@ -772,6 +774,33 @@ const Missions = {
         </div>
       </div>
 
+      <!-- Modale PLANIFIER -->
+      <div class="modal" id="missionsPlanifierModal">
+        <div class="modal-content" style="max-width:500px;">
+          <div class="modal-header" style="background:#8b5cf6;">
+            <h2>📅 Planifier la mission</h2>
+            <button class="close-btn" onclick="Missions.closePlanifierModal()">&times;</button>
+          </div>
+          <div class="modal-body">
+            <form onsubmit="Missions.confirmerPlanifier(event)">
+              <input type="hidden" id="missionsPlanifierId">
+              <div style="background:#faf5ff;border:1px solid #c4b5fd;border-radius:10px;padding:14px;margin-bottom:16px;">
+                <div style="font-size:.75rem;color:#7c3aed;text-transform:uppercase;font-weight:700;">Intervention</div>
+                <div style="font-size:1.05rem;font-weight:800;margin-top:4px;" id="missionsPlanifierTitre">—</div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div class="form-group"><label>Date *</label><input type="date" id="missionsPlanifierDate" required></div>
+                <div class="form-group"><label>Heure</label><input type="time" id="missionsPlanifierHeure"></div>
+              </div>
+              <div style="display:flex;gap:10px;">
+                <button type="submit" class="btn" style="flex:1;background:#8b5cf6;">📅 Planifier</button>
+                <button type="button" class="btn btn-ghost" onclick="Missions.closePlanifierModal()">Annuler</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
       <!-- Modale ASSIGNER -->
       <div class="modal" id="missionsAssignerModal">
         <div class="modal-content" style="max-width:560px;">
@@ -809,6 +838,40 @@ const Missions = {
           </div>
         </div>
       </div>`;
+  },
+
+  // ---------- Modale PLANIFIER (pour les demandes)
+
+  openPlanifierModal(id) {
+    const i = this.getAll().find(x => String(x.id) === String(id));
+    if (!i) return;
+    document.getElementById('missionsPlanifierId').value = id;
+    document.getElementById('missionsPlanifierTitre').textContent = i.numero + ' · ' + i.demandeur;
+    document.getElementById('missionsPlanifierDate').value = Utils.todayISO();
+    document.getElementById('missionsPlanifierHeure').value = '';
+    document.getElementById('missionsPlanifierModal').classList.add('active');
+  },
+
+  closePlanifierModal() { document.getElementById('missionsPlanifierModal').classList.remove('active'); },
+
+  confirmerPlanifier(event) {
+    event.preventDefault();
+    const id = Number(document.getElementById('missionsPlanifierId').value);
+    const date = document.getElementById('missionsPlanifierDate').value;
+    const heure = document.getElementById('missionsPlanifierHeure').value;
+    if (!date) { alert('Choisissez une date.'); return; }
+    const list = this.getAll();
+    const idx = list.findIndex(x => String(x.id) === String(id));
+    if (idx === -1) { alert('Introuvable.'); return; }
+    list[idx].statut = 'planifiee';
+    list[idx].datePrevue = date;
+    if (heure) list[idx].heurePrevue = heure;
+    Interventions.saveAll(list);
+    this.closePlanifierModal();
+    this.render();
+    if (typeof Agenda !== 'undefined' && Agenda.render) Agenda.render();
+    if (typeof Dashboard !== 'undefined' && Dashboard.render) Dashboard.render();
+    BricoBol.updateStorageInfo();
   },
 
   onShow(params) {

@@ -176,7 +176,7 @@ const Frais = {
     const sel = document.getElementById('fraisInterventions');
     if (!sel) return;
     if (typeof Interventions === 'undefined') return;
-    const inter = Interventions.getAll().filter(i => i.statut === 'demande' || i.statut === 'terminee' || i.statut === 'en_cours' || i.statut === 'planifiee');
+    const inter = Interventions.getAll().filter(i => i.statut === 'demande' || i.statut === 'terminee' || i.statut === 'planifiee');
     sel.innerHTML = inter.map(i => `<option value="${Utils.escapeHtml(i.numero)}">${Utils.escapeHtml(i.numero)} · ${Utils.escapeHtml(i.demandeur)} · ${Utils.escapeHtml(i.type)}</option>`).join('');
   },
 

@@ -25,14 +25,14 @@ const Dashboard = {
     // ---- Interventions en cours/planifiées ----
     if (typeof Interventions !== 'undefined' && Interventions.getAll) {
       const inter = Interventions.getAll();
-      const enCours = inter.filter(i => i.statut === 'en_cours' || i.statut === 'planifiee').length;
+      const enCours = inter.filter(i => i.statut === 'planifiee').length;
       const el = document.getElementById('dashInterventions');
       if (el) el.textContent = enCours;
     }
 
     // ---- 🆕 Interventions AUJOURD'HUI ----
     if (typeof Tournee !== 'undefined') {
-      const jour = Tournee.getJour();
+      const jour = Missions.getJour();
       const el = document.getElementById('dashTournee');
       if (el) el.textContent = jour.length;
       const elSub = document.getElementById('dashTourneeSub');
@@ -40,7 +40,7 @@ const Dashboard = {
         if (jour.length === 0) {
           elSub.textContent = 'Aucune prévue →';
         } else {
-          const nbB = Tournee._compterBenevoles(jour);
+          const nbB = Missions._compterBenevoles(jour);
           elSub.textContent = `${nbB} bénévole${nbB > 1 ? 's' : ''} mobilisé${nbB > 1 ? 's' : ''} →`;
         }
       }
@@ -79,7 +79,7 @@ const Dashboard = {
 
     // 🆕 Tournée : en retard
     if (typeof Tournee !== 'undefined') {
-      const enRetard = Tournee.getEnRetard();
+      const enRetard = Missions.getEnRetard();
       if (enRetard.length > 0) {
         alertes.push({
           icon: '⚠️',
@@ -96,9 +96,9 @@ const Dashboard = {
 
     // 🆕 Tournée : interventions du jour
     if (typeof Tournee !== 'undefined') {
-      const jour = Tournee.getJour();
+      const jour = Missions.getJour();
       if (jour.length > 0) {
-        const nbB = Tournee._compterBenevoles(jour);
+        const nbB = Missions._compterBenevoles(jour);
         alertes.push({
           icon: '📅',
           texte: `${jour.length} intervention${jour.length > 1 ? 's' : ''} prévue${jour.length > 1 ? 's' : ''} aujourd'hui · ${nbB} bénévole${nbB > 1 ? 's' : ''}`,
@@ -108,6 +108,23 @@ const Dashboard = {
           couleur: '#2563eb',
           bg: '#eff6ff',
           border: '#bfdbfe'
+        });
+      }
+    }
+
+    // A valider (missions passees non terminees)
+    if (typeof Missions !== 'undefined' && Missions.getAValider) {
+      const aValider = Missions.getAValider();
+      if (aValider.length > 0) {
+        alertes.push({
+          icon: '⏳',
+          texte: aValider.length + ' mission' + (aValider.length > 1 ? 's' : '') + ' passee' + (aValider.length > 1 ? 's' : '') + ' a valider',
+          action: 'Voir',
+          view: 'missions',
+          params: { tab: 'a_valider' },
+          couleur: '#16a34a',
+          bg: '#f0fdf4',
+          border: '#86efac'
         });
       }
     }
@@ -210,7 +227,7 @@ const Dashboard = {
     // Frais a creer (interventions terminees sans deplacement)
     if (typeof Interventions !== "undefined" && Interventions.getAll) {
       const sansFrais = Interventions.getAll().filter(i =>
-        (i.statut === "terminee" || i.statut === "validee") && !Interventions.getFraisForIntervention(i.numero)
+        (i.statut === "terminee") && !Interventions.getFraisForIntervention(i.numero)
       );
       if (sansFrais.length > 0) {
         alertes.push({
