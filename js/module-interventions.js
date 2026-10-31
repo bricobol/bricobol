@@ -15,8 +15,8 @@ const Interventions = {
   saveAll(list) { Storage.saveInterventions(list); },
 
   nextNumero() {
-    const list = this.getAll();
-    const n = list.length + 1;
+    const n = Storage.getIntCounter();
+    Storage.saveIntCounter(n + 1);
     return 'INT-' + String(n).padStart(3, '0');
   },
 
