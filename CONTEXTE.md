@@ -1,10 +1,14 @@
 # Historique des changements
 
-(À remplir au fil des mises à jour.)
+- **31/10/2026** : Config Cline + nettoyage contexte
+  - Fichiers : .gitignore, CONTEXTE.md, sw.js
+  - Ajout des entrées manquantes dans .gitignore
+  - Création du fichier CONTEXTE.md unifié
+  - Incrémentation Service Worker v41 → v42
 
 # Contexte projet BricoBol
 
-Dernière mise à jour : 25/10/2026 (fin Session Mobile / Ajouts Yapla & Distances)
+Dernière mise à jour : 31/10/2026 (Config Cline + nettoyage contexte)
 
 ## 🚨 CHANGEMENT MAJEUR — 23/09/2026
 
