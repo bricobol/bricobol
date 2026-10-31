@@ -174,6 +174,17 @@ const Storage = {
     const counter = await SupaClient.getSingleton('counters', 'key', 'adh_counter');
     this.cache.adh_counter = counter ? counter.value : 1;
 
+    const intCounter = await SupaClient.getSingleton('counters', 'key', 'int_counter');
+    this.cache.int_counter = intCounter ? intCounter.value : 1;
+    // Rattrapage : si le compteur est inférieur au plus grand INT présent
+    const maxInt = (this.cache.interventions || []).reduce((max, i) => {
+      const m = (i.numero || '').match(/INT-(\d+)/);
+      return m ? Math.max(max, parseInt(m[1], 10)) : max;
+    }, 0);
+    if (this.cache.int_counter < maxInt + 1) {
+      this.cache.int_counter = maxInt + 1;
+    }
+
     this._charge = true;
     this._sauverCacheLocal();
     console.log('✅ Chargé : ' + tables.map(t => t + '=' + (this.cache[t]||[]).length).join(', '));
@@ -187,13 +198,22 @@ const Storage = {
     }
     this.cache.parametres = this._getLocal('parametres', {});
     this.cache.adh_counter = this._getLocal('adh_counter', 1);
+    this.cache.int_counter = this._getLocal('int_counter', 1);
+    // Rattrapage : si le compteur est inférieur au plus grand INT présent
+    const maxInt = (this.cache.interventions || []).reduce((max, i) => {
+      const m = (i.numero || '').match(/INT-(\d+)/);
+      return m ? Math.max(max, parseInt(m[1], 10)) : max;
+    }, 0);
+    if (this.cache.int_counter < maxInt + 1) {
+      this.cache.int_counter = maxInt + 1;
+    }
     this._charge = true;
     console.log('📦 Chargé depuis localStorage (cache de secours)');
   },
 
   _sauverCacheLocal() {
     try {
-      for (const t of ['adherents', 'cotisations', 'entries', 'interventions', 'deplacements', 'dons', 'evenements', 'documents', 'parametres', 'adh_counter']) {
+      for (const t of ['adherents', 'cotisations', 'entries', 'interventions', 'deplacements', 'dons', 'evenements', 'documents', 'parametres', 'adh_counter', 'int_counter']) {
         if (this.cache[t] !== undefined) {
           localStorage.setItem(this.PREFIX + t, JSON.stringify(this.cache[t]));
         }
@@ -248,6 +268,11 @@ const Storage = {
   saveAdherents(list) { this.set('adherents', list); },
   getCounter() { return this.get('adh_counter', 1); },
   saveCounter(n) { this.set('adh_counter', n); },
+
+  // --- Compteur interventions (numéros INT) ---
+  getIntCounter() { return this.get('int_counter', 1); },
+  saveIntCounter(n) { this.set('int_counter', n); },
+
   getEntries() { return this.get('entries', []); },
   saveEntries(list) { this.set('entries', list); },
   getInterventions() { return this.get('interventions', []); },
@@ -314,6 +339,15 @@ const Storage = {
     if (key === 'adh_counter') {
       if (SupaClient && SupaClient.client && SupaClient.enLigne) {
         SupaClient.setCounter('adh_counter', value);
+      } else {
+        this._fileAttente.push({ key, value, ancienneValeur });
+        this._majBandeau();
+      }
+      return;
+    }
+    if (key === 'int_counter') {
+      if (SupaClient && SupaClient.client && SupaClient.enLigne) {
+        SupaClient.setCounter('int_counter', value);
       } else {
         this._fileAttente.push({ key, value, ancienneValeur });
         this._majBandeau();
@@ -420,6 +454,9 @@ const Storage = {
     const counter = this._getLocal('adh_counter', 1);
     await SupaClient.setCounter('adh_counter', counter);
 
+    const intCounter = this._getLocal('int_counter', 1);
+    await SupaClient.setCounter('int_counter', intCounter);
+
     localStorage.setItem('bricobol_migre_v1', '1');
 
     alert(`✅ Migration terminée.\n\n${total} enregistrement(s) envoyé(s).\n\nDétail :\n${recap.join('\n')}`);
@@ -448,11 +485,14 @@ const Storage = {
     if (SupaClient && SupaClient.client) {
       await SupaClient.setSingleton('parametres', 'id', 1, {});
       await SupaClient.setCounter('adh_counter', 1);
+      await SupaClient.setCounter('int_counter', 1);
     }
     localStorage.removeItem(this.PREFIX + 'parametres');
     localStorage.removeItem(this.PREFIX + 'adh_counter');
+    localStorage.removeItem(this.PREFIX + 'int_counter');
     this.cache.parametres = {};
     this.cache.adh_counter = 1;
+    this.cache.int_counter = 1;
 
     alert('✅ Tout est vidé.');
     location.reload();

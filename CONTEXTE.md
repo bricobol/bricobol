@@ -1,5 +1,12 @@
 # Historique des changements
 
+- **31/10/2026** : Compteur INT stable (int_counter)
+  - Fichiers : storage.js, module-interventions.js, sw.js
+  - Chargement de int_counter depuis Supabase et localStorage
+  - Rattrapage auto si compteur < plus grand INT-XXX présent
+  - Sauvegarde du compteur dans le cache local
+  - Incrémentation Service Worker v42 → v43
+
 - **31/10/2026** : Config Cline + nettoyage contexte
   - Fichiers : .gitignore, CONTEXTE.md, sw.js
   - Ajout des entrées manquantes dans .gitignore
@@ -8,7 +15,7 @@
 
 # Contexte projet BricoBol
 
-Dernière mise à jour : 31/10/2026 (Config Cline + nettoyage contexte)
+Dernière mise à jour : 31/10/2026 (Compteur INT stable)
 
 ## 🚨 CHANGEMENT MAJEUR — 23/09/2026
 
