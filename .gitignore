@@ -12,3 +12,13 @@ bricobol-mobile.html
 *.backup*
 _fix.ps1
 *.bak
+
+# Additional ignored files
+diagnostic.js
+.env
+*.xlsx
+*.csv
+index.bin
+postings.bin
+build.lock
+metadata.json
