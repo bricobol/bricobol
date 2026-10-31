@@ -22,3 +22,7 @@ index.bin
 postings.bin
 build.lock
 metadata.json
+.clineignore.local
+.env.*
+export*/
+dump*/

@@ -1,0 +1,20 @@
+# Fichiers que Cline ne doit pas lire (economie de tokens, moins d'erreurs)
+bricobol-mobile.html
+index-monolithe-*.html
+*.backup
+*.backup2
+*.bak
+*.new
+index.html.backup*
+fix*.sh
+fix*.awk
+_fix.ps1
+node_modules/
+.git/
+# Donnees reelles d'adherents : ne jamais exposer a une API externe
+*.xlsx
+*.csv
+export*/
+dump*/
+.env
+.env.*

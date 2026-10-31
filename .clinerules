@@ -1,0 +1,37 @@
+# BricoBol - regles du projet (lues par Cline a chaque tache)
+
+## Projet
+- Application de gestion pour l'association BricoBol.
+- Web 100% vanilla (HTML/CSS/JS), base Supabase, hebergee sur GitHub Pages, PWA.
+- Structure modulaire : index.html (coquille), css/style.css, js/*.js (un module par fonctionnalite).
+- Repo : https://github.com/bricobol/bricobol
+
+## Regles strictes
+- NE JAMAIS modifier bricobol-mobile.html (genere par build.js).
+- NE JAMAIS relancer decouper.js.
+- Incrementer la version du cache dans sw.js avant chaque commit.
+- Fichiers en UTF-8 SANS BOM. Conserver les accents et emojis existants.
+- Apres chaque modification JS : lancer `node --check <fichier>`.
+- Pas de nouvelle dependance ni de framework : JS vanilla uniquement.
+
+## Pieges connus
+- Mapping Storage (storage.js) : pas de self-mapping.
+- onShow: (params) => X.onShow(params) ; sinon les parametres sont perdus.
+- Module non monte : utiliser BricoBol.ensureModuleMounted(vue).
+- Modales : verifier la hierarchie DOM (une modale imbriquee devient invisible) ; fermer la modale parente avant d'en ouvrir une autre.
+- Les IDs Supabase peuvent etre decimaux : utiliser parseFloat, jamais parseInt.
+- Apostrophes francaises dans les alert() : utiliser des guillemets doubles en JS.
+
+## Conventions metier
+- Numerotation : ADH-XXX, INT-XXX, DEP-XXX, REC-XXX, ACH-XXX (les numeros INT restent stables).
+- Statuts interventions : demande, planifiee, terminee, annulee. "A valider" = planifiee + date passee (calcule, pas un statut).
+- Frais route : kmBrut x coef 1.15 = kmApplique (Frais.routeDetail()).
+- Hash d'URL : #agenda, etc. Priorite : hash > localStorage > dashboard.
+
+## Facon de travailler
+- Mode Plan d'abord : proposer un plan court avant de coder.
+- Petites modifications ciblees ; ne pas reecrire un fichier entier.
+- Gros fichiers (adherents 94 Ko, parametres 65 Ko, tournee 62 Ko) : lire uniquement les parties utiles (recherche par mot-cle, plages de lignes).
+- Un chantier = une tache = un commit.
+- Ne jamais lire ni afficher de vraies donnees d'adherents (noms, telephones, exports Yapla) ni de cles API.
+- Repondre en francais.
