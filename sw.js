@@ -1,9 +1,9 @@
-﻿// ============================================================
+// ============================================================
 // SERVICE WORKER â€” BricoBol
 // Cache l'app pour hors-ligne + mises Ã  jour auto
 // ============================================================
 
-const CACHE = 'bricobol-v43';
+const CACHE = 'bricobol-v44';
 const ASSETS = [
   '/', '/bricobol/',
   '/bricobol/index.html',

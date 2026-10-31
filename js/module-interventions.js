@@ -113,7 +113,7 @@ const Interventions = {
     list.sort((a, b) => {
       const da = (a.datePrevue || '9999-12-31') + ' ' + (a.heurePrevue || '99:99');
       const db = (b.datePrevue || '9999-12-31') + ' ' + (b.heurePrevue || '99:99');
-      return da.localeCompare(db);
+      return db.localeCompare(da);
     });
     container.innerHTML = list.map(i => this.renderCard(i)).join('');
   },
