@@ -35,3 +35,20 @@
 - Un chantier = une tache = un commit.
 - Ne jamais lire ni afficher de vraies donnees d'adherents (noms, telephones, exports Yapla) ni de cles API.
 - Repondre en francais.
+
+## Fin de chaque tache (OBLIGATOIRE)
+1. Lancer node --check sur chaque fichier JS modifie.
+2. Incrementer la version de CACHE dans sw.js (si un fichier de l'app a change).
+3. Mettre a jour CONTEXTE.md :
+   - changer la ligne "Derniere mise a jour" (date du jour + resume en 1 ligne),
+   - ajouter une entree dans "Historique des changements" : date, fichiers modifies, ce qui a change,
+   - cocher ou deplacer la tache terminee dans les phases,
+   - ajouter tout nouveau piege decouvert dans la section Pieges (sans doublon).
+4. Commiter UNIQUEMENT les fichiers que tu as modifies, nommes un par un (jamais git add . ni git add -A), avec un message clair.
+5. NE JAMAIS faire git push : je pousse moi-meme apres avoir teste dans le navigateur.
+6. Terminer par un resume de 3 lignes : ce qui a change, ce que je dois tester, la commande git push a lancer.
+
+## Avant de commencer une tache
+- Lire CONTEXTE.md.
+- Si le depot a des modifications non commitees qui ne viennent pas de cette tache, me le dire avant de continuer.
+- Ne jamais configurer l'identite Git (user.name, user.email) : c'est deja fait.
