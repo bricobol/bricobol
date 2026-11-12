@@ -105,3 +105,4 @@ Sur smartphone — Acode + terminal Alpine
 - **Afficher la commune** à côté de l'intitulé mission/intervention.
 - **Annuler n°INT dans mission annulée.**
 - **Mapping / Graphique historiques déplacements ↔ n° intervention.**
+
