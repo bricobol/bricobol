@@ -26,3 +26,8 @@ metadata.json
 .env.*
 export*/
 dump*/
+
+*.ps1
+*.bat
+*.md
+!contexte.txt

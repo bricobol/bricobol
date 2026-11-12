@@ -601,6 +601,19 @@ console.log('🔥 SAVE — prenom lu =', document.getElementById('adhPrenom').va
     BricoBol.updateStorageInfo();
   },
 
+  _trier(list) {
+    const tri = (document.getElementById('adhSort') || {}).value || 'az';
+    const nom = a => ((a.nom || '') + ' ' + (a.prenom || '')).trim();
+    const num = a => parseInt(String(a.numero || '').replace(/\D/g, ''), 10) || 0;
+    const copie = list.slice();
+    if (tri === 'recent') {
+      copie.sort((a, b) => (b.dateCreation || '').localeCompare(a.dateCreation || '') || num(b) - num(a));
+    } else {
+      copie.sort((a, b) => nom(a).localeCompare(nom(b), 'fr', { sensitivity: 'base' }));
+    }
+    return copie;
+  },
+
   getFiltered() {
     const q = (document.getElementById('adhSearch').value || '').toLowerCase();
     const type = document.getElementById('adhFilterType').value;
@@ -630,7 +643,7 @@ console.log('🔥 SAVE — prenom lu =', document.getElementById('adhPrenom').va
   render() {
     const container = document.getElementById('adherentsListContainer');
     if (!container) return;
-    const list = this.getFiltered();
+    const list = this._trier(this.getFiltered());
     const cnt = document.getElementById('adhCount');
     if (cnt) cnt.textContent = `${list.length} personne${list.length > 1 ? 's' : ''}`;
     if (list.length === 0) {
@@ -1586,6 +1599,10 @@ console.log('🔥 SAVE — prenom lu =', document.getElementById('adhPrenom').va
               <option value="a_maj">📝 À mettre à jour</option>
             </select>
           </div>
+          <select id="adhSort" onchange="Adherents.render()" style="margin-top:10px;width:100%;padding:9px;border:1px solid var(--border);border-radius:8px;font-size:.88rem;">
+              <option value="az">Tri : A &rarr; Z (nom)</option>
+              <option value="recent">Tri : plus r&eacute;cents en haut</option>
+            </select>
           <div style="margin-top:10px;font-size:.82rem;color:var(--text-light);" id="adhCount">0 personne</div>
         </div>
         <div id="adherentsListContainer"></div>
