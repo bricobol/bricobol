@@ -161,20 +161,21 @@ const Storage = {
     }
     console.log('⏳ Chargement depuis Supabase...');
     const tables = ['adherents', 'cotisations', 'entries', 'interventions', 'deplacements', 'dons', 'evenements', 'documents'];
-    for (const t of tables) {
-      const rows = await SupaClient.chargerTout(t);
-      if (rows === null) {
+    const resultats = await Promise.all(tables.map(t => SupaClient.chargerTout(t)));
+    for (let i = 0; i < tables.length; i++) {
+      if (resultats[i] === null) {
         this._chargerDepuisLocal();
         return;
       }
-      this.cache[t] = rows.map(r => this._versApp(t, r));
+      this.cache[tables[i]] = resultats[i].map(r => this._versApp(tables[i], r));
     }
-    const param = await SupaClient.getSingleton('parametres', 'id', 1);
+    const [param, counter, intCounter] = await Promise.all([
+      SupaClient.getSingleton('parametres', 'id', 1),
+      SupaClient.getSingleton('counters', 'key', 'adh_counter'),
+      SupaClient.getSingleton('counters', 'key', 'int_counter')
+    ]);
     this.cache.parametres = param ? (param.data || {}) : {};
-    const counter = await SupaClient.getSingleton('counters', 'key', 'adh_counter');
     this.cache.adh_counter = counter ? counter.value : 1;
-
-    const intCounter = await SupaClient.getSingleton('counters', 'key', 'int_counter');
     this.cache.int_counter = intCounter ? intCounter.value : 1;
     // Rattrapage : si le compteur est inférieur au plus grand INT présent
     const maxInt = (this.cache.interventions || []).reduce((max, i) => {
