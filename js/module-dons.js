@@ -415,7 +415,7 @@ const Dons = {
     let contact = null;
     const contactMode = document.getElementById('donContactMode').value;
     if (contactMode === 'existant') {
-      contactId = parseInt(document.getElementById('donContactId').value);
+      contactId = parseFloat(document.getElementById('donContactId').value);
       if (!contactId) { alert('Sélectionnez un contact.'); return; }
       contact = Storage.getAdherents().find(a => a.id === contactId);
     } else {
