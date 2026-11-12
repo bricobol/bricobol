@@ -4,6 +4,8 @@
 
 const Frais = {
 
+  _fraisPage: 1,
+
   BAREME_DEFAUT: 0.40,
   repartitionTemp: [],
   calculEnCours: false,
@@ -126,6 +128,7 @@ const Frais = {
   },
 
   openForm(id = null) {
+    this._fraisPage = 1;
     const form = document.getElementById('fraisForm');
     form.reset();
     document.getElementById('fraisEditId').value = '';
@@ -176,8 +179,71 @@ const Frais = {
     const sel = document.getElementById('fraisInterventions');
     if (!sel) return;
     if (typeof Interventions === 'undefined') return;
-    const inter = Interventions.getAll().filter(i => i.statut === 'demande' || i.statut === 'terminee' || i.statut === 'planifiee');
-    sel.innerHTML = inter.map(i => `<option value="${Utils.escapeHtml(i.numero)}">${Utils.escapeHtml(i.numero)} · ${Utils.escapeHtml(i.demandeur)} · ${Utils.escapeHtml(i.type)}</option>`).join('');
+    const parPage = 10;
+    const inter = Interventions.getAll().sort((a, b) => {
+      const da = a.datePrevue || a.dateCreation || '9999-12-31';
+      const db = b.datePrevue || b.dateCreation || '9999-12-31';
+      return db.localeCompare(da);
+    });
+    const total = inter.length;
+    const totalPages = Math.max(1, Math.ceil(total / parPage));
+    if (this._fraisPage > totalPages) this._fraisPage = totalPages;
+    if (this._fraisPage < 1) this._fraisPage = 1;
+    const start = (this._fraisPage - 1) * parPage;
+    const pageList = inter.slice(start, start + parPage);
+    const selected = (this.repartitionTemp || []).map(r => r.numero);
+    const adhs = (typeof Storage !== 'undefined' && Storage.getAdherents) ? Storage.getAdherents() : [];
+    const getVille = (i) => {
+      let adh = null;
+      if (i.adherentId) adh = adhs.find(a => String(a.id) === String(i.adherentId));
+      if (!adh && i.demandeur) {
+        const nomC = i.demandeur.toLowerCase().trim();
+        adh = adhs.find(a => {
+          const t = ((a.prenom || '') + ' ' + (a.nom || '')).toLowerCase().trim();
+          const t2 = ((a.nom || '') + ' ' + (a.prenom || '')).toLowerCase().trim();
+          return t === nomC || t2 === nomC;
+        });
+      }
+      if (!adh) return '';
+  const v = (adh.ville || '').trim();
+  const cp = (adh.cp || '').trim();
+  const isNum = v !== '' && v.split('').every(ch => ch >= '0' && ch <= '9');
+  if (v && !isNum) return v;
+  if (cp) return cp;
+  return v;
+    };
+    sel.innerHTML = pageList.map(i => {
+      const dateStr = i.datePrevue ? (() => { const d = i.datePrevue.split('-'); return d[2] + '/' + d[1] + '/' + d[0].slice(2); })() : 'A pl.';
+      const ville = getVille(i);
+      const villeStr = ville ? ' - ' + ville : '';
+      const numCourt = (i.numero || '').replace(/^INT-?/, '');
+      const isSel = selected.includes(i.numero) ? ' selected' : '';
+      const t = (i.type || '');
+      let typeAbbr = '';
+      if (t.indexOf('Bricolage') >= 0) typeAbbr = 'PB';
+      else if (t.indexOf('Entretien') >= 0) typeAbbr = 'Entr';
+      else if (t.indexOf('Manutention') >= 0) typeAbbr = 'Manu';
+      else if (t.indexOf('Num') >= 0) typeAbbr = 'Num';
+      else if (t.indexOf('lectro') >= 0) typeAbbr = 'Elec';
+      else if (t.indexOf('Cueillette') >= 0) typeAbbr = 'Cueil';
+      const typeStr = typeAbbr ? ' (' + typeAbbr + ')' : '';
+      const typeFull = typeAbbr ? ({PB:'Petit Bricolage',Entr:'Entretien',Manu:'Manutention',Num:'Numérique',Elec:'Électroménager',Cueil:'Cueillette'}[typeAbbr] || t) : t;
+      const fraisI = (typeof Interventions !== 'undefined' && Interventions.getFraisForIntervention) ? Interventions.getFraisForIntervention(i.numero) : null;
+      let indicateur = '';
+      let titleIndic = '';
+      if (fraisI && !fraisI.incomplet) { indicateur = '🚗 '; titleIndic = 'Frais de route créés'; }
+      else if (i.statut === 'terminee' || i.statut === 'planifiee') { indicateur = '⚠️ '; titleIndic = 'Frais à créer'; }
+      else { titleIndic = 'Pas de frais (demande)'; }
+      const title = titleIndic + (typeFull ? ' | ' + typeFull : '') + (ville ? ' | ' + ville : '');
+      return '<option value="' + Utils.escapeHtml(i.numero) + '"' + isSel + ' title="' + Utils.escapeHtml(title) + '">' + indicateur + Utils.escapeHtml(numCourt) + ' - ' + Utils.escapeHtml(i.demandeur) + ' - ' + dateStr + villeStr + typeStr + '</option>';
+    }).join('');
+    const info = document.getElementById('fraisInterventionsInfo');
+    if (info) info.textContent = 'Page ' + this._fraisPage + ' / ' + totalPages + ' (' + total + ' interventions)';
+  },
+
+  _changerPage(delta) {
+    this._fraisPage = (this._fraisPage || 1) + delta;
+    this.refreshInterventionsList();
   },
 
   syncRepartitionFromSelect() {
@@ -881,7 +947,17 @@ const Frais = {
 
               <div class="form-group">
                 <label>Interventions de la tournée <small style="color:var(--text-light);font-weight:400;">(Ctrl+clic / Cmd+clic pour plusieurs)</small></label>
-                <select id="fraisInterventions" multiple style="min-height:100px;" onchange="Frais.syncRepartitionFromSelect()"></select>
+                <select id="fraisInterventions" multiple style="min-height:120px;" onchange="Frais.syncRepartitionFromSelect()"></select>
+                <div style="display:flex;gap:6px;align-items:center;margin-top:6px;">
+                  <button type="button" class="btn btn-ghost" style="padding:6px 10px;font-size:.8rem;" onclick="Frais._changerPage(-1)">&#9664;</button>
+                  <div id="fraisInterventionsInfo" style="flex:1;text-align:center;font-size:.8rem;color:var(--text-light);"></div>
+                  <button type="button" class="btn btn-ghost" style="padding:6px 10px;font-size:.8rem;" onclick="Frais._changerPage(1)">&#9654;</button>
+                </div>
+                <div style="margin-top:6px;font-size:.72rem;color:var(--text-light);line-height:1.5;background:#f8fafc;padding:6px 8px;border-radius:6px;border:1px solid var(--border);">
+                  <span title="Intervention déjà remboursée">🚗 = frais créés</span> ·
+                  <span title="Intervention terminée sans frais">⚠️ = frais à créer</span> ·
+                  <span title="Petit Bricolage (PB) · Entretien (Entr) · Manutention (Manu) · Numérique (Num) · Électroménager (Elec) · Cueillette (Cueil)">ℹ️ abréviations</span>
+                </div>
               </div>
 
               <div style="margin-bottom:14px;">
