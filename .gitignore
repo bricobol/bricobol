@@ -31,3 +31,5 @@ dump*/
 *.bat
 *.md
 !contexte.txt
+
+contexte-ancien-*
