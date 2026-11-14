@@ -119,7 +119,7 @@ const Frais = {
         <div class="adh-card-info">
           <div class="adh-card-name">
             <span class="adh-card-numero">${Utils.escapeHtml(f.numero)}</span>
-            ${Utils.escapeHtml(f.vehiculeProprietaireNom || f.benevole || '—')} — ${f.km} km
+            ${f.vehiculeProprietaireNom && f.vehiculeProprietaireNom !== f.benevole ? Utils.escapeHtml(f.benevole || '\u2014') + ' \u2192 \uD83D\uDE97 ' + Utils.escapeHtml(f.vehiculeProprietaireNom) : '\uD83D\uDE97 ' + Utils.escapeHtml(f.vehiculeProprietaireNom || f.benevole || '\u2014')} \u00b7 ${f.km} km
           </div>
           <div class="adh-card-details">
             📅 ${Utils.formatDate(f.date)} · 🚗 ${trajetAffiche}<br>
@@ -155,7 +155,8 @@ const Frais = {
       document.getElementById('fraisFormTitle').textContent = 'Modifier ' + f.numero;
       document.getElementById('fraisEditId').value = f.id;
       document.getElementById('fraisDate').value = f.date || '';
-      document.getElementById('fraisBenevole').value = f.vehiculeProprietaireNom || f.benevole || '';
+      document.getElementById('fraisBenevole').value = f.benevole || '';
+      document.getElementById('fraisVehiculeProprietaire').value = f.vehiculeProprietaireNom || '';
       document.getElementById('fraisKm').value = f.km || '';
       document.getElementById('fraisTrajet').value = f.trajet || '';
       document.getElementById('fraisMotif').value = f.motif || '';
@@ -276,11 +277,11 @@ const Frais = {
       return existing || { numero: num, kmIndividuel: 0, part: 0 };
     });
         this.repartitionTemp = newRep;
-    const _champBenev = document.getElementById('fraisBenevole');
-    if (_champBenev && !_champBenev.value.trim()) {
+    const _champVeh = document.getElementById('fraisVehiculeProprietaire');
+    if (_champVeh && !_champVeh.value.trim()) {
       for (const _num of Array.from(resultat)) {
         const _inter = Interventions.getAll().find(x => x.numero === _num);
-        if (_inter && _inter.vehiculeProprietaireNom) { _champBenev.value = _inter.vehiculeProprietaireNom; break; }
+        if (_inter && _inter.vehiculeProprietaireNom) { _champVeh.value = _inter.vehiculeProprietaireNom; break; }
       }
     }
     this.renderRepartition();
@@ -592,8 +593,8 @@ const Frais = {
     const data = {
       date: document.getElementById('fraisDate').value,
       benevole: document.getElementById('fraisBenevole').value.trim(),
-      vehiculeProprietaireId: this._getProprietaireId(document.getElementById('fraisBenevole').value.trim()),
-      vehiculeProprietaireNom: document.getElementById('fraisBenevole').value.trim(),
+      vehiculeProprietaireId: this._getProprietaireId(document.getElementById('fraisVehiculeProprietaire').value.trim() || document.getElementById('fraisBenevole').value.trim()),
+      vehiculeProprietaireNom: document.getElementById('fraisVehiculeProprietaire').value.trim() || document.getElementById('fraisBenevole').value.trim(),
       km,
       trajet: document.getElementById('fraisTrajet').value.trim(),
       motif: document.getElementById('fraisMotif').value.trim(),
@@ -1003,6 +1004,11 @@ const Frais = {
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                 <div class="form-group"><label>Date *</label><input type="date" id="fraisDate" required></div>
                 <div class="form-group"><label>Bénévole *</label><input type="text" id="fraisBenevole" list="benevolesFraisList" placeholder="Nom du bénévole" required><datalist id="benevolesFraisList"></datalist></div>
+              </div>
+              <div class="form-group">
+                <label>Propri\u00e9taire du v\u00e9hicule (\u00e0 rembourser)</label>
+                <input type="text" id="fraisVehiculeProprietaire" list="benevolesFraisList" placeholder="Vide = m\u00eame que le b\u00e9n\u00e9vole">
+                <small style="color:var(--text-light);font-size:.72rem;">Vide si le b\u00e9n\u00e9vole est aussi le propri\u00e9taire du v\u00e9hicule.</small>
               </div>
 
               <div class="form-group">
