@@ -58,6 +58,7 @@ const Storage = {
       validee_le: 'valideeLe',
       deplacement_id: 'deplacementId',
       sans_frais: "sansFrais",
+      heures_benevoles: 'heuresBenevoles',
       updated_at: 'updatedAt'
     },
     deplacements: {
@@ -66,6 +67,8 @@ const Storage = {
       compta_piece: 'comptaPiece',
       mode_remboursement: 'modeRemboursement',
       note_remboursement: 'noteRemboursement',
+      vehicule_proprietaire_id: 'vehiculeProprietaireId',
+      vehicule_proprietaire_nom: 'vehiculeProprietaireNom',
       updated_at: 'updatedAt'
     },
     dons: {
