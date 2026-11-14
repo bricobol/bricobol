@@ -143,3 +143,31 @@ Sur smartphone — Acode + terminal Alpine
 - `Get-Content` + `clip` affiche les accents en `??` : c'est un artefact du presse-papiers, pas un fichier abîmé. Pour contrôler : `Select-String -Encoding UTF8`.
 - Un script de modification doit refuser d'agir si l'ancre n'est pas trouvée exactement 1 fois (modèle : `fix-annuaire-tri.ps1`, `fix-frais-mobile.ps1`).
 - Les fichiers `.ps1` restent en ASCII ; le JS inséré utilise des échappements (`\u00B7`) pour les caractères spéciaux.
+
+
+# Session du 14/11/2026 (suite) : detail tactile Frais multi-pages
+
+## Fait
+- **Frais, detail au toucher** (`js/module-frais.js`) : div bleue `#fraisInterventionDetail` sous la liste, affiche `\uD83D\uDCCC INT-XXX \u00B7 Nom \u00B7 Type \u00B7 Date \u00B7 Ville` pour chaque intervention sélectionnée. Se met à jour via `_majDetail()` appelé depuis `syncRepartitionFromSelect()` et `refreshInterventionsList()`.
+- **Frais, selections multi-pages** : `syncRepartitionFromSelect` fait l'union entre les sélections des pages précédentes (`this.repartitionTemp`) et celles de la page courante. Re-applique `opt.selected = true` après `innerHTML` pour conserver le surlignage.
+- **Frais, `_majDetail` lit `repartitionTemp`** et non `sel.selectedOptions` (sinon les selections des autres pages disparaissent de la div).
+- Dépôt : commits `ab0fdc6` (intitulé compact) et `a46492c` (détail tactile multi-pages). Cache `sw.js` v48.
+
+## État vérifié en base (14/11)
+- adherents : 34
+- cotisations : 31
+- entries : 33
+- interventions : 52
+- deplacements : 22
+- dons : 6
+- evenements : 1
+- documents : 0
+
+## Prochaine session — refonte modale "Fait" (module-missions.js)
+Décisions actées :
+- Ajouter heure début + heure fin à la validation, enregistrer `interventions.heures_benevoles` (JSONB).
+- Ajouter case "Don reçu" + montant à la validation, ouvrir la modale Don pré-remplie après fermeture (ne pas enregistrer automatiquement).
+- Ajouter sélecteur "Véhicule utilisé (à rembourser)" : le remboursement va au propriétaire du véhicule (souvent le président), les km partent de son adresse. Pas de champ "conducteur".
+- SQL à exécuter avant : voir section Véhicule ci-dessus.
+- Travail prévu : Claude.ai + Supabase MCP pour l'audit schéma, puis scripts PowerShell pour les modifications. Prompt détaillé fourni séparément.
+
