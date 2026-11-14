@@ -217,6 +217,13 @@ const Frais = {
       const ville = getVille(i);
       const villeStr = ville ? ' - ' + ville : '';
       const numCourt = (i.numero || '').replace(/^INT-?/, '');
+      const petit = window.innerWidth < 600;
+      const mots = (i.demandeur || '').split(' ');
+      const majs = mots.filter(w => w.length > 1 && w === w.toUpperCase());
+      const pren = mots.filter(w => majs.indexOf(w) < 0);
+      const nomAff = (petit && majs.length && pren.length) ? pren[0].charAt(0) + '. ' + majs.join(' ') : (i.demandeur || '');
+      const villeAff = petit ? ville.replace(/^Saint-/, 'St-').replace(/^Sainte-/, 'Ste-') : ville;
+      const dateAff = petit ? dateStr.replace(/\/\d\d$/, '') : dateStr;
       const isSel = selected.includes(i.numero) ? ' selected' : '';
       const t = (i.type || '');
       let typeAbbr = '';
@@ -235,7 +242,7 @@ const Frais = {
       else if (i.statut === 'terminee' || i.statut === 'planifiee') { indicateur = '⚠️ '; titleIndic = 'Frais à créer'; }
       else { titleIndic = 'Pas de frais (demande)'; }
       const title = titleIndic + (typeFull ? ' | ' + typeFull : '') + (ville ? ' | ' + ville : '');
-      return '<option value="' + Utils.escapeHtml(i.numero) + '"' + isSel + ' title="' + Utils.escapeHtml(title) + '">' + indicateur + Utils.escapeHtml(numCourt) + ' - ' + Utils.escapeHtml(i.demandeur) + ' - ' + dateStr + villeStr + typeStr + '</option>';
+      return '<option value="' + Utils.escapeHtml(i.numero) + '"' + isSel + ' title="' + Utils.escapeHtml(title) + '">' + indicateur + Utils.escapeHtml(numCourt) + ' \u00B7 ' + Utils.escapeHtml(nomAff) + ' \u00B7 ' + dateAff + (typeAbbr ? ' \u00B7 ' + typeAbbr : '') + (villeAff ? ' \u00B7 ' + Utils.escapeHtml(villeAff) : '') + '</option>';
     }).join('');
     const info = document.getElementById('fraisInterventionsInfo');
     if (info) info.textContent = 'Page ' + this._fraisPage + ' / ' + totalPages + ' (' + total + ' interventions)';
@@ -947,7 +954,7 @@ const Frais = {
 
               <div class="form-group">
                 <label>Interventions de la tournée <small style="color:var(--text-light);font-weight:400;">(Ctrl+clic / Cmd+clic pour plusieurs)</small></label>
-                <select id="fraisInterventions" multiple style="min-height:120px;" onchange="Frais.syncRepartitionFromSelect()"></select>
+                <select id="fraisInterventions" multiple style="min-height:120px;font-size:0.85rem;" onchange="Frais.syncRepartitionFromSelect()"></select>
                 <div style="display:flex;gap:6px;align-items:center;margin-top:6px;">
                   <button type="button" class="btn btn-ghost" style="padding:6px 10px;font-size:.8rem;" onclick="Frais._changerPage(-1)">&#9664;</button>
                   <div id="fraisInterventionsInfo" style="flex:1;text-align:center;font-size:.8rem;color:var(--text-light);"></div>

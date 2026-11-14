@@ -106,3 +106,40 @@ Sur smartphone — Acode + terminal Alpine
 - **Annuler n°INT dans mission annulée.**
 - **Mapping / Graphique historiques déplacements ↔ n° intervention.**
 
+## Session du 14/11/2026 : tri, intitulés, mobile, reprise
+
+### Fait
+- **Annuaire** : liste déroulante de tri (A → Z par défaut / plus récents en haut), via `Adherents._trier()` et `#adhSort`. Script appliqué (3 remplacements, syntaxe OK). À revérifier visuellement dans l'appli.
+- **Frais, déroulant des interventions** (`js/module-frais.js`) : intitulé uniforme `047 · Prénom NOM · 30/10/26 · PB · Saint-Étienne`.
+- **Frais, version mobile** (écran < 600 px) : `047 · D. NOM · 30/10 · PB · St-Étienne` (initiale du prénom, Saint → St, Sainte → Ste, date sans l'année). Calculé au rendu : un changement d'orientation ne le recalcule pas.
+- Dépôt : version du cache `sw.js` v47 avant ces deux modifications ; elles sont à commiter (voir « Premier geste »).
+
+### Règles décidées (rappel)
+- Tri « nouveau en haut » par défaut (Interventions, Missions Historique, Frais), avec liste de tri récent/ancien. Exceptions chronologiques : Agenda, Missions « À valider » et « À venir ».
+- Intitulé uniforme partout : `INT-047 · Prénom NOM · date · type · commune` (fonction unique `Interventions.intitule(i)`, parties manquantes sautées). Seul le déroulant des Frais est fait.
+- Déroulant « Nouveau déplacement » en 3 catégories : Planifiées (frais sûrs), Demandées (prévision), Passées sans frais créés. Exclues : annulées, passées avec déplacement déjà créé, passées avec `sansFrais` coché (champ existant `toggleSansFrais`).
+- Véhicule (frais de route) : le remboursement va au **propriétaire du véhicule** (souvent le président) et le calcul des km part de **son** adresse. Paramètres : « Véhicule par défaut » (choix dans l'annuaire). Frais : sélecteur « Propriétaire du véhicule (à rembourser) » pré-rempli. Modale « Fait » : choix du véhicule à la validation. Affichage « Véhicule de : [Nom] » + colonne dans l'export CSV. SQL (pas encore exécuté) :
+  ```sql
+  ALTER TABLE deplacements ADD COLUMN IF NOT EXISTS vehicule_proprietaire_id TEXT;
+  ALTER TABLE deplacements ADD COLUMN IF NOT EXISTS vehicule_proprietaire_nom TEXT;
+  ALTER TABLE parametres ADD COLUMN IF NOT EXISTS vehicule_defaut_id TEXT;
+  ALTER TABLE parametres ADD COLUMN IF NOT EXISTS vehicule_defaut_nom TEXT;
+  ```
+- Refonte modale « Fait » (`openFaitModal`, module-missions.js) : heure de début (pré-remplie, modifiable), heure de fin, case « Don reçu » (+ montant), véhicule utilisé ; enregistre `heures_benevoles` et crée le déplacement avec le bon propriétaire.
+
+### Prochaines étapes (dans l'ordre)
+0. **Premier geste** : tester le déroulant Frais en mode mobile (F12, Ctrl+Maj+M), puis commit + `git push` (voir la commande ci-dessous).
+1. **Détail au toucher** dans Frais : sous la liste, afficher l'intitulé complet des interventions sélectionnées (`📌 INT-047 · Prénom NOM · type · date · commune`). Il faut d'abord lire le code actuel (la zone de la légende et la synchronisation de la sélection).
+2. **Démarrage plus rapide** (`js/storage.js`) : `Promise.all` pour les 8 tables + paramètres + compteurs ; recharger au focus seulement après 90 s. Ensuite, si besoin, affichage immédiat depuis le cache local (stale-while-revalidate) sans redessiner une vue en cours de saisie.
+3. **Fix du don** : vérifier `js/module-dons.js` (`parseInt` → `parseFloat` sur les IDs décimaux).
+4. **Tâche A** : tri récent/ancien dans Missions et Frais.
+5. **Tâche B** : `Interventions.intitule(i)` partout.
+6. **Tâche C** : déroulant des frais en 3 catégories + commune à côté des km.
+7. **Véhicule** (SQL, Paramètres, Frais, modale « Fait »).
+8. Export documents Pôle Emploi (le clic ne fait rien), badge cotisation, montant manuel des frais.
+
+### Pièges notés
+- Les scripts générés par un autre assistant (DeepSeek) supposaient un code que le dépôt n'avait pas ; toujours vérifier l'état réel (`Select-String`, `git status -sb`) avant d'appliquer un script.
+- `Get-Content` + `clip` affiche les accents en `??` : c'est un artefact du presse-papiers, pas un fichier abîmé. Pour contrôler : `Select-String -Encoding UTF8`.
+- Un script de modification doit refuser d'agir si l'ancre n'est pas trouvée exactement 1 fois (modèle : `fix-annuaire-tri.ps1`, `fix-frais-mobile.ps1`).
+- Les fichiers `.ps1` restent en ASCII ; le JS inséré utilise des échappements (`\u00B7`) pour les caractères spéciaux.
