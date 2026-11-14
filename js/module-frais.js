@@ -140,6 +140,18 @@ const Frais = {
       </div>`;
   },
 
+  preRemplirTournee(numeros, benevoleNom, vehiculeNom) {
+    if (!Array.isArray(numeros) || numeros.length === 0) { alert('Aucune intervention fournie.'); return; }
+    this.openForm();
+    document.getElementById('fraisBenevole').value = benevoleNom || '';
+    document.getElementById('fraisVehiculeProprietaire').value = vehiculeNom || benevoleNom || '';
+    this.repartitionTemp = numeros.map(num => ({ numero: num, kmIndividuel: 0, part: 0 }));
+    this.refreshInterventionsList();
+    this.renderRepartition();
+    this.updateMontant();
+    this._majDetail();
+  },
+
   openForm(id = null) {
     this._fraisPage = 1;
     const form = document.getElementById('fraisForm');

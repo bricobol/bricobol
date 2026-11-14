@@ -171,3 +171,26 @@ Décisions actées :
 - SQL à exécuter avant : voir section Véhicule ci-dessus.
 - Travail prévu : Claude.ai + Supabase MCP pour l'audit schéma, puis scripts PowerShell pour les modifications. Prompt détaillé fourni séparément.
 
+## Tournee du jour (14/11/2026 suite 3)
+
+### Fait
+- **Frais, preRemplirTournee(numeros, benevoleNom, vehiculeNom)** : methode dans `module-frais.js` qui ouvre la modale Nouveau deplacement pre-remplie avec plusieurs interventions, le benevole et le proprietaire du vehicule.
+- **Missions, bouton "Tournee du jour"** (`module-missions.js`) : bouton en haut de Missions. Au clic :
+  - Regroupe les missions du jour (Aujourd'hui + en retard) par benevole.
+  - Garde uniquement les groupes avec 2+ interventions.
+  - Si 1 seul groupe : ouvre directement la modale Frais pre-remplie.
+  - Si plusieurs groupes : affiche une modale de choix (`#missionsTourneeModal`).
+  - Si aucun groupe : alerte "Aucune tournee possible".
+  - Fonctions : `ouvrirTourneeDuJour()`, `_renderTourneeListe()`, `_choisirTournee()`, `_lancerTournee()`, `closeTourneeModal()`.
+- **Missions, bloc "Frais : X.XX EUR"** sur les cartes : insere apres les autres infos (`extra`), affiche `part` des frais calcules via `getFraisForIntervention`. Insere AVANT "// Boutons selon le statut/contexte" (ancre sure, ne touche pas `let extra`).
+
+### Bug corrige
+- Premier essai du bloc "Frais : X.XX EUR" a casse la declaration `let extra = '';` dans `_renderCarte` (remplacement du `let extra` par un bloc multi-lignes). Restaure depuis `.bak`, refait avec une ancre differente ("// Boutons selon le statut/contexte"). Le .bak2 est conserve en securite.
+
+### Etat actuel
+- Cache `sw.js` : a incrementer a chaque commit.
+- Deux fichiers de contexte existent :
+  - **CONTEXTE.md** : LE VRAI, a jour (14/11), a utiliser pour reprendre.
+  - **contexte.txt** : ancien (30/10), obsolete. A ignorer. Peut etre supprime.
+- Prochaines etapes inchangees (voir section precedente) : heures benevoles recap, stale-while-revalidate, prefiche, import Yapla, export Pole Emploi, badge cotisation, agenda v2.
+

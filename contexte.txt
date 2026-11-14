@@ -594,3 +594,52 @@ L'IA propose un plan AVANT de coder.
 Utiliser des scripts PowerShell (PC) ou commandes sed/grep (mobile).
 
 ================================================================
+
+
+# Session du 14/11/2026 - suite 2 (modale Fait + vehicule proprietaire)
+
+## Fait
+- **Frais, detail tactile multi-pages** : div `#fraisInterventionDetail` sous la liste des interventions.
+- **Modale Fait enrichie** (`openFaitModal` + `confirmerFait`, js/module-missions.js) : heures debut/fin, case don + montant, select vehicule. Enregistre `interventions.heures_benevoles` (JSONB) et `interventions.vehicule_proprietaire_id/nom`.
+- **Parametres, vehicule par defaut** : select `#paramVehiculeDefaut` dans l'onglet Divers (benevoles uniquement + recherche). Sauvegarde dans `parametres.data.vehiculeDefautId/Nom`.
+- **Frais, proprietaire du vehicule** : champ `#fraisVehiculeProprietaire` separe de `#fraisBenevole`. Pre-rempli avec `vehiculeDefautNom` ou `intervention.vehiculeProprietaireNom`. Carte : `🚗 **Proprietaire** ← Benevole`. Fiche : 2 blocs separes + "A REMBOURSER AU PROPRIETAIRE DU VEHICULE".
+- **Fallback** : anciens deplacements sans proprietaire distinct affichent `vehiculeDefautNom` des parametres.
+- **Metier** : remboursement au proprietaire du vehicule (souvent le president), pas forcement au benevole assigne. Pas de champ "conducteur".
+
+## SQL execute
+```sql
+ALTER TABLE interventions ADD COLUMN IF NOT EXISTS heures_benevoles JSONB;
+ALTER TABLE interventions ADD COLUMN IF NOT EXISTS vehicule_proprietaire_id TEXT;
+ALTER TABLE interventions ADD COLUMN IF NOT EXISTS vehicule_proprietaire_nom TEXT;
+ALTER TABLE deplacements ADD COLUMN IF NOT EXISTS vehicule_proprietaire_id TEXT;
+ALTER TABLE deplacements ADD COLUMN IF NOT EXISTS vehicule_proprietaire_nom TEXT;
+
+Commits session
+a46492c Frais detail tactile multi-pages
+
+b3bbe7c Parametres vehicule par defaut
+
+3b01b5d Missions HTML modale Fait
+
+bfe1dfa Missions openFaitModal
+
+3d37dd6 Missions confirmerFait + heures + vehicule
+
+69d7249 Frais proprietaire (1)
+
+ce3b0f8 Frais proprietaire (2)
+
+23f3061 Frais pre-remplissage + fiche distinct
+
+aa12be1 Frais carte inverse (proprietaire en premier)
+
+Pieges decouverts
+VSCodium ecrase les modifs PowerShell si l'onglet du fichier reste ouvert. Fermer l'onglet avant de lancer un script, ou "File: Revert File" apres.
+
+Verifier qu'un commit contient bien le code : git show HEAD:js/fichier.js | Select-String 'pattern'. Le script 6c a affiche OK mais le commit ne contenait pas le code.
+
+clip.exe casse les accents : utiliser Set-Clipboard -Value (mais plante si vide, tester avant).
+
+git push | Out-Null donne un faux KO : comparer git log --oneline -1 (local) avec git log --oneline -1 origin/main.
+
+Here-string PowerShell @'...'@ fragile sur gros blocs : préférer coller directement dans VSCodium.

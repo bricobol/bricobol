@@ -175,6 +175,11 @@ const Missions = {
       extra += `<div style="font-size:.75rem;color:var(--success);margin-top:4px;font-weight:700;">✔️ Validée le : ${new Date(i.valideeLe).toLocaleDateString('fr-FR')}</div>`;
     }
 
+    const _fraisI = (typeof Interventions !== 'undefined' && Interventions.getFraisForIntervention) ? Interventions.getFraisForIntervention(i.numero) : null;
+    if (_fraisI && _fraisI.part > 0 && !_fraisI.incomplet) {
+      extra += '<div style="margin-top:6px;padding:6px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;font-size:.78rem;color:#1e40af;font-weight:700;">\uD83D\uDCB0 Frais : ' + _fraisI.part.toFixed(2) + ' \u20AC</div>';
+    }
+
     // Boutons selon le statut/contexte
     let boutons = '';
     if (i.statut === 'planifiee' && estAValider) {
@@ -657,6 +662,7 @@ const Missions = {
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <button class="btn btn-ghost" onclick="Missions.render()">🔄 Rafraîchir</button>
+            <button class="btn" style="background:#0ea5e9;" onclick="Missions.ouvrirTourneeDuJour()">\uD83D\uDDFA Tourn\u00e9e du jour</button>
           </div>
         </div>
         <div id="missionsContainer"></div>
@@ -836,6 +842,20 @@ const Missions = {
         </div>
       </div>
 
+      <!-- Modale TOURNEE DU JOUR -->
+      <div class="modal" id="missionsTourneeModal">
+        <div class="modal-content" style="max-width:500px;">
+          <div class="modal-header" style="background:#0ea5e9;">
+            <h2>\uD83D\uDDFA Tourn\u00e9e du jour</h2>
+            <button class="close-btn" onclick="Missions.closeTourneeModal()">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div style="font-size:.85rem;color:var(--text-light);margin-bottom:14px;">Choisissez le b\u00e9n\u00e9vole pour la tourn\u00e9e (2 interventions minimum) :</div>
+            <div id="missionsTourneeListe"></div>
+          </div>
+        </div>
+      </div>
+
       <!-- Modale ASSIGNER -->
       <div class="modal" id="missionsAssignerModal">
         <div class="modal-content" style="max-width:560px;">
@@ -908,6 +928,68 @@ const Missions = {
     if (typeof Dashboard !== 'undefined' && Dashboard.render) Dashboard.render();
     BricoBol.updateStorageInfo();
   },
+
+  // ---------- Tournee du jour ----------
+
+  ouvrirTourneeDuJour() {
+    const jour = [...this.getEnRetard(), ...this.getJour()];
+    if (jour.length === 0) { alert("Aucune mission planifiee aujourd'hui."); return; }
+    const groupes = {};
+    jour.forEach(i => {
+      const ben = (typeof Storage !== 'undefined' && Storage.getBenevoles) ? Storage.getBenevoles(i) : [];
+      const nom = ben.length > 0 ? ben[0] : (i.benevole || '');
+      if (!nom) return;
+      if (!groupes[nom]) groupes[nom] = [];
+      groupes[nom].push(i);
+    });
+    const liste = Object.keys(groupes).map(nom => ({ nom: nom, missions: groupes[nom] })).filter(g => g.missions.length >= 2);
+    if (liste.length === 0) {
+      alert("Aucune tournee possible : il faut au moins 2 interventions du meme benevole aujourd'hui.");
+      return;
+    }
+    if (liste.length === 1) {
+      this._lancerTournee(liste[0]);
+      return;
+    }
+    this._renderTourneeListe(liste);
+    document.getElementById('missionsTourneeModal').classList.add('active');
+  },
+
+  _renderTourneeListe(liste) {
+    this._tourneesGroupes = liste;
+    const container = document.getElementById('missionsTourneeListe');
+    if (!container) return;
+    container.innerHTML = liste.map((g, idx) => {
+      const nums = g.missions.map(m => Utils.escapeHtml(m.numero)).join(' \u00b7 ');
+      return '<button type="button" class="btn" style="width:100%;margin-bottom:8px;background:#0ea5e9;text-align:left;padding:12px;display:block;" onclick="Missions._choisirTournee(' + idx + ')">' +
+        '<strong>' + Utils.escapeHtml(g.nom) + '</strong> \u2014 ' + g.missions.length + ' interventions' +
+        '<div style="font-size:.75rem;opacity:.85;margin-top:2px;">' + nums + '</div>' +
+        '</button>';
+    }).join('');
+  },
+
+  _choisirTournee(idx) {
+    const g = this._tourneesGroupes && this._tourneesGroupes[idx];
+    if (!g) return;
+    this.closeTourneeModal();
+    this._lancerTournee(g);
+  },
+
+  _lancerTournee(groupe) {
+    const numeros = groupe.missions.map(m => m.numero);
+    let vehiculeNom = '';
+    for (const m of groupe.missions) {
+      if (m.vehiculeProprietaireNom) { vehiculeNom = m.vehiculeProprietaireNom; break; }
+    }
+    if (!vehiculeNom) {
+      const p = (typeof Storage !== 'undefined' && Storage.getParametres) ? Storage.getParametres() : {};
+      vehiculeNom = p.vehiculeDefautNom || '';
+    }
+    if (typeof BricoBol !== 'undefined' && BricoBol.ensureModuleMounted) BricoBol.ensureModuleMounted('frais');
+    setTimeout(() => { Frais.preRemplirTournee(numeros, groupe.nom, vehiculeNom); }, 250);
+  },
+
+  closeTourneeModal() { document.getElementById('missionsTourneeModal').classList.remove('active'); },
 
   onShow(params) {
     if (params && params.tab) this.currentTab = params.tab;
