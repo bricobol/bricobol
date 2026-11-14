@@ -257,13 +257,48 @@ const Frais = {
     const sel = document.getElementById('fraisInterventions');
     if (!sel) return;
     const selected = Array.from(sel.selectedOptions).map(o => o.value);
-    const newRep = selected.map(num => {
+    const pageActuelle = Array.from(sel.options).map(o => o.value);
+    const anciens = new Set((this.repartitionTemp || []).map(r => r.numero));
+    const resultat = new Set();
+    for (const n of anciens) { if (!pageActuelle.includes(n)) resultat.add(n); }
+    for (const n of selected) resultat.add(n);
+    const newRep = Array.from(resultat).map(num => {
       const existing = this.repartitionTemp.find(r => r.numero === num);
       return existing || { numero: num, kmIndividuel: 0, part: 0 };
     });
-    this.repartitionTemp = newRep;
+        this.repartitionTemp = newRep;
     this.renderRepartition();
     this.updateMontant();
+    this._majDetail();
+  },
+
+  _majDetail() {
+    const div = document.getElementById('fraisInterventionDetail');
+    if (!div) return;
+    const sel = document.getElementById('fraisInterventions');
+    if (!sel) return;
+    const nums = (this.repartitionTemp || []).map(r => r.numero);
+    if (nums.length === 0) { div.style.display = 'none'; return; }
+    const adhs = (typeof Storage !== 'undefined' && Storage.getAdherents) ? Storage.getAdherents() : [];
+    const lignes = nums.map(num => {
+      const i = Interventions.getAll().find(x => x.numero === num);
+      if (!i) return num;
+      let adh = null;
+      if (i.adherentId) adh = adhs.find(a => String(a.id) === String(i.adherentId));
+      if (!adh && i.demandeur) {
+        const nomC = i.demandeur.toLowerCase().trim();
+        adh = adhs.find(a => {
+          const t = ((a.prenom || '') + ' ' + (a.nom || '')).toLowerCase().trim();
+          const t2 = ((a.nom || '') + ' ' + (a.prenom || '')).toLowerCase().trim();
+          return t === nomC || t2 === nomC;
+        });
+      }
+      const ville = adh ? ((adh.ville || '').trim() || (adh.cp || '').trim()) : '';
+      const dateStr = i.datePrevue ? Utils.formatDate(i.datePrevue) : 'a planifier';
+      return '\uD83D\uDCCC ' + i.numero + ' \u00B7 ' + (i.demandeur || '') + ' \u00B7 ' + (i.type || '') + ' \u00B7 ' + dateStr + (ville ? ' \u00B7 ' + ville : '');
+    });
+    div.innerHTML = lignes.join('<br>');
+    div.style.display = 'block';
   },
 
   renderRepartition() {
@@ -960,6 +995,7 @@ const Frais = {
                   <div id="fraisInterventionsInfo" style="flex:1;text-align:center;font-size:.8rem;color:var(--text-light);"></div>
                   <button type="button" class="btn btn-ghost" style="padding:6px 10px;font-size:.8rem;" onclick="Frais._changerPage(1)">&#9654;</button>
                 </div>
+                <div id="fraisInterventionDetail" style="margin-top:8px;font-size:.8rem;padding:8px 10px;background:#eff6ff;border-radius:6px;border:1px solid #bfdbfe;color:#1e40af;display:none;"></div>
                 <div style="margin-top:6px;font-size:.72rem;color:var(--text-light);line-height:1.5;background:#f8fafc;padding:6px 8px;border-radius:6px;border:1px solid var(--border);">
                   <span title="Intervention déjà remboursée">🚗 = frais créés</span> ·
                   <span title="Intervention terminée sans frais">⚠️ = frais à créer</span> ·
