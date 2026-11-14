@@ -194,3 +194,23 @@ Décisions actées :
   - **contexte.txt** : ancien (30/10), obsolete. A ignorer. Peut etre supprime.
 - Prochaines etapes inchangees (voir section precedente) : heures benevoles recap, stale-while-revalidate, prefiche, import Yapla, export Pole Emploi, badge cotisation, agenda v2.
 
+# Prochaine session - Frais consommables + rappel achats
+
+Decisions actees (Q1-Q4) :
+- Q1 = B : plusieurs frais consommables par mission (lignes ajoutables)
+- Q2 = A : champ fournisseur optionnel
+- Q3 = A : rappel achats benevoles dans la MEME session
+- Q4 = B : montant frais route affiche = deplacement.part si existe, sinon kmDeclares x bareme, sinon 'A calculer'
+
+Plan en 8 etapes :
+1. SQL : 6 ALTER TABLE entries (statut, benevole_rembourser, fournisseur, date_remboursement, mode_remboursement, note_remboursement) + 1 ALTER TABLE interventions (frais_consommables JSONB)
+2. Modale Fait : bloc 'Frais route' (montant) + bloc 'Frais consommables' (multi-lignes + fournisseur optionnel + avance par asso/benevole)
+3. openFaitModal : calcul du montant a afficher (Q4=B)
+4. confirmerFait : enregistre frais_consommables JSONB + cree entry (statut en_attente si benevole, validee si asso)
+5. Module Frais : carte stats 'Achats benevoles a rembourser' + filtre liste
+6. Dashboard : bandeau 'X achats a rembourser'
+7. Comptabilite : bouton 'Marquer rembourse' sur entree concernee
+8. Test + commit + maj CONTEXTE.md
+
+Emplacement du rappel : Dashboard (bandeau) + Module Frais (carte stats) + fiche entree comptable (bouton rembourse).
+
