@@ -13,6 +13,15 @@ const Frais = {
   getAll() { return Storage.getDeplacements(); },
   saveAll(list) { Storage.saveDeplacements(list); },
 
+  _getProprietaireId(nom) {
+    if (!nom) return '';
+    const adh = Storage.getAdherents().find(a => {
+      const complet = ((a.prenom || '') + ' ' + (a.nom || '')).toLowerCase().trim();
+      return complet === nom.toLowerCase().trim();
+    });
+    return adh ? String(adh.id) : '';
+  },
+
   getBareme() {
     const p = Storage.getParametres();
     return p.baremeKm || this.BAREME_DEFAUT;
@@ -34,7 +43,7 @@ const Frais = {
     const filtre = document.getElementById('fraisFilterStatut').value;
     return this.getAll().filter(f => {
       if (q) {
-        const hay = [f.numero, f.benevole, f.motif, f.trajet].join(' ').toLowerCase();
+        const hay = [f.numero, f.benevole, f.vehiculeProprietaireNom, f.motif, f.trajet].join(' ').toLowerCase();
         if (!hay.includes(q)) return false;
       }
       if (filtre === 'a_rembourser' && f.rembourse) return false;
@@ -110,7 +119,7 @@ const Frais = {
         <div class="adh-card-info">
           <div class="adh-card-name">
             <span class="adh-card-numero">${Utils.escapeHtml(f.numero)}</span>
-            ${Utils.escapeHtml(f.benevole)} — ${f.km} km
+            ${Utils.escapeHtml(f.vehiculeProprietaireNom || f.benevole || '—')} — ${f.km} km
           </div>
           <div class="adh-card-details">
             📅 ${Utils.formatDate(f.date)} · 🚗 ${trajetAffiche}<br>
@@ -146,7 +155,7 @@ const Frais = {
       document.getElementById('fraisFormTitle').textContent = 'Modifier ' + f.numero;
       document.getElementById('fraisEditId').value = f.id;
       document.getElementById('fraisDate').value = f.date || '';
-      document.getElementById('fraisBenevole').value = f.benevole || '';
+      document.getElementById('fraisBenevole').value = f.vehiculeProprietaireNom || f.benevole || '';
       document.getElementById('fraisKm').value = f.km || '';
       document.getElementById('fraisTrajet').value = f.trajet || '';
       document.getElementById('fraisMotif').value = f.motif || '';
@@ -267,6 +276,13 @@ const Frais = {
       return existing || { numero: num, kmIndividuel: 0, part: 0 };
     });
         this.repartitionTemp = newRep;
+    const _champBenev = document.getElementById('fraisBenevole');
+    if (_champBenev && !_champBenev.value.trim()) {
+      for (const _num of Array.from(resultat)) {
+        const _inter = Interventions.getAll().find(x => x.numero === _num);
+        if (_inter && _inter.vehiculeProprietaireNom) { _champBenev.value = _inter.vehiculeProprietaireNom; break; }
+      }
+    }
     this.renderRepartition();
     this.updateMontant();
     this._majDetail();
@@ -576,6 +592,8 @@ const Frais = {
     const data = {
       date: document.getElementById('fraisDate').value,
       benevole: document.getElementById('fraisBenevole').value.trim(),
+      vehiculeProprietaireId: this._getProprietaireId(document.getElementById('fraisBenevole').value.trim()),
+      vehiculeProprietaireNom: document.getElementById('fraisBenevole').value.trim(),
       km,
       trajet: document.getElementById('fraisTrajet').value.trim(),
       motif: document.getElementById('fraisMotif').value.trim(),
