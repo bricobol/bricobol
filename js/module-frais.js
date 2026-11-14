@@ -114,12 +114,16 @@ const Frais = {
     const nbInter = (f.interventions || []).length;
     const infoInter = nbInter > 0 ? ` · <strong>${nbInter} intervention${nbInter > 1 ? 's' : ''}</strong>${nbInter > 1 ? ' (prorata)' : ''}` : '';
     const trajetAffiche = this._trajetDetaille(f);
+    const _pVeh = (typeof Storage !== 'undefined' && Storage.getParametres) ? Storage.getParametres() : {};
+    const _defVeh = _pVeh.vehiculeDefautNom || '';
+    let _propVeh = f.vehiculeProprietaireNom || '';
+    if ((!_propVeh || _propVeh === f.benevole) && _defVeh) _propVeh = _defVeh;
     return `
       <div class="adh-card statut-${statut}" onclick="Frais.openDetail(${f.id})">
         <div class="adh-card-info">
           <div class="adh-card-name">
             <span class="adh-card-numero">${Utils.escapeHtml(f.numero)}</span>
-            ${f.vehiculeProprietaireNom && f.vehiculeProprietaireNom !== f.benevole ? '\uD83D\uDE97 <strong>' + Utils.escapeHtml(f.vehiculeProprietaireNom) + '</strong> <small style="color:var(--text-light);font-weight:400;">\u2190 ' + Utils.escapeHtml(f.benevole || '\u2014') + '</small>' : '\uD83D\uDE97 <strong>' + Utils.escapeHtml(f.vehiculeProprietaireNom || f.benevole || '\u2014') + '</strong>'} \u00b7 ${f.km} km
+            ${_propVeh && _propVeh !== f.benevole ? '\uD83D\uDE97 <strong>' + Utils.escapeHtml(_propVeh) + '</strong> <small style="color:var(--text-light);font-weight:400;">\u2190 ' + Utils.escapeHtml(f.benevole || '\u2014') + '</small>' : '\uD83D\uDE97 <strong>' + Utils.escapeHtml(_propVeh || f.benevole || '\u2014') + '</strong>'} \u00b7 ${f.km} km
           </div>
           <div class="adh-card-details">
             📅 ${Utils.formatDate(f.date)} · 🚗 ${trajetAffiche}<br>
@@ -835,7 +839,7 @@ const Frais = {
       </div>
       <div class="adh-detail-section">
         <h4>Propri\u00e9taire du v\u00e9hicule (\u00e0 rembourser)</h4>
-        <p>\uD83D\uDE97 ${f.vehiculeProprietaireNom && f.vehiculeProprietaireNom !== f.benevole ? Utils.escapeHtml(f.vehiculeProprietaireNom) : Utils.escapeHtml(f.benevole) + ' <em style="color:var(--text-light);font-size:.8rem;">(m\u00eame que le b\u00e9n\u00e9vole)</em>'}</p>
+        <p>\uD83D\uDE97 ${_propVeh && _propVeh !== f.benevole ? Utils.escapeHtml(_propVeh) : Utils.escapeHtml(f.benevole) + ' <em style="color:var(--text-light);font-size:.8rem;">(m\u00eame que le b\u00e9n\u00e9vole)</em>'}</p>
       </div>
       <div class="adh-detail-section">
         <h4>Trajet global</h4>
