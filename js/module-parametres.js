@@ -231,6 +231,10 @@ const Parametres = {
     set('paramCoefficientKm', p.coefficientKm);
     this.majExempleCoefficient(p.coefficientKm);
     set('paramExercice', p.exerciceCourant);
+    this._vehiculeDefautId = String(p.vehiculeDefautId || '');
+    const rechVeh = document.getElementById('paramVehiculeDefautRecherche');
+    if (rechVeh) rechVeh.value = '';
+    this._renderVehiculeDefaut('');
 
     // Sous-listes
     this.renderCampagnes();
@@ -561,7 +565,40 @@ Cordialement,
   },
 
   // ---------- Sauvegarde des paramètres ----------
-  saveParams(event) {
+_renderVehiculeDefaut(filtre) {
+    const sel = document.getElementById('paramVehiculeDefaut');
+    if (!sel) return;
+    const f = (filtre || '').toLowerCase().trim();
+    const tous = Storage.getAdherents().filter(a => a.type === 'B\u00e9n\u00e9vole' || (a.type === 'Adh\u00e9rent b\u00e9n\u00e9ficiaire' && a.aussiBenevole === true));
+    const liste = tous.slice().sort((a, b) => {
+      const na = ((a.nom || '') + ' ' + (a.prenom || '')).toLowerCase();
+      const nb = ((b.nom || '') + ' ' + (b.prenom || '')).toLowerCase();
+      return na.localeCompare(nb);
+    }).filter(a => {
+      if (!f) return true;
+      const nom = ((a.prenom || '') + ' ' + (a.nom || '')).toLowerCase();
+      return nom.indexOf(f) >= 0;
+    });
+    let html = '<option value="">-- Aucun --</option>' + liste.map(a => {
+      const nom = ((a.prenom || '') + ' ' + (a.nom || '')).trim();
+      const isSel = String(a.id) === String(this._vehiculeDefautId || '') ? ' selected' : '';
+      return '<option value="' + Utils.escapeHtml(String(a.id)) + '"' + isSel + '>' + Utils.escapeHtml(nom) + '</option>';
+    }).join('');
+    if (this._vehiculeDefautId && !liste.some(a => String(a.id) === String(this._vehiculeDefautId))) {
+      const adh = tous.find(a => String(a.id) === String(this._vehiculeDefautId));
+      if (adh) {
+        const nom = ((adh.prenom || '') + ' ' + (adh.nom || '')).trim();
+        html = '<option value="">-- Aucun --</option><option value="' + Utils.escapeHtml(String(adh.id)) + '" selected>' + Utils.escapeHtml(nom) + '</option>' + html.substring(html.indexOf('</option>') + 9);
+      }
+    }
+    sel.innerHTML = html;
+  },
+
+  filtrerVehiculeDefaut(val) {
+    this._renderVehiculeDefaut(val);
+  },
+
+    saveParams(event) {
     if (event) event.preventDefault();
     const p = this.getParam();
 
@@ -618,6 +655,14 @@ Cordialement,
     p.baremeKm = parseFloat(document.getElementById('paramBareme').value) || 0.40;
     p.coefficientKm = parseFloat(document.getElementById('paramCoefficientKm').value) || 1.15;
     p.exerciceCourant = parseInt(document.getElementById('paramExercice').value) || new Date().getFullYear();
+    const elVeh = document.getElementById('paramVehiculeDefaut');
+    p.vehiculeDefautId = elVeh ? (elVeh.value || '') : '';
+    if (p.vehiculeDefautId) {
+      const adhSel = Storage.getAdherents().find(a => String(a.id) === String(p.vehiculeDefautId));
+      p.vehiculeDefautNom = adhSel ? ((adhSel.prenom || '') + ' ' + (adhSel.nom || '')).trim() : '';
+    } else {
+      p.vehiculeDefautNom = '';
+    }
 
 
     // Onglet Messages
@@ -946,6 +991,7 @@ Cordialement,
                 <div class="form-group"><label>Coefficient de sécurité km</label><input type="number" step="0.01" min="1" id="paramCoefficientKm" oninput="Parametres.majExempleCoefficient(this.value)"><small style="color:var(--text-light);font-size:.72rem;">Multiplie les km calculés automatiquement (ex : 1.15 = +15%)</small><div id="paramCoefficientExemple" style="margin-top:6px;padding:8px 10px;background:#eff6ff;border-radius:6px;font-size:.78rem;color:#1e40af;"></div></div>
                 <div class="form-group"><label>Coefficient de sécurité km</label><input type="number" step="0.01" min="1" id="paramCoefficientKm" oninput="Parametres.majExempleCoefficient(this.value)"><small style="color:var(--text-light);font-size:.72rem;">Multiplie les km calculés automatiquement (ex : 1.15 = +15%)</small><div id="paramCoefficientExemple" style="margin-top:6px;padding:8px 10px;background:#eff6ff;border-radius:6px;font-size:.78rem;color:#1e40af;"></div></div>
                 <div class="form-group"><label>Exercice courant</label><input type="number" id="paramExercice"></div>
+                <div class="form-group"><label>V\u00e9hicule par d\u00e9faut (\u00e0 rembourser)</label><input type="text" id="paramVehiculeDefautRecherche" placeholder="Rechercher un b\u00e9n\u00e9vole..." oninput="Parametres.filtrerVehiculeDefaut(this.value)" style="padding:9px;border:1px solid var(--border);border-radius:8px;font-size:.88rem;width:100%;margin-bottom:6px;"><select id="paramVehiculeDefaut" style="padding:9px;border:1px solid var(--border);border-radius:8px;font-size:.88rem;width:100%;"><option value="">-- Aucun --</option></select><small style="color:var(--text-light);font-size:.72rem;">Propri\u00e9taire du v\u00e9hicule rembours\u00e9 des frais de route par d\u00e9faut.</small></div>
               </div>
               <button type="submit" class="btn" style="width:100%;">💾 Enregistrer</button>
             </div>
