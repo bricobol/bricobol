@@ -249,13 +249,35 @@ const Missions = {
     const i = this.getAll().find(x => String(x.id) === String(id));
     if (!i) return;
     document.getElementById('missionsFaitId').value = id;
-    document.getElementById('missionsFaitTitre').textContent = `${i.numero} · ${i.demandeur}`;
+    document.getElementById('missionsFaitTitre').textContent = i.numero + ' \u00b7 ' + i.demandeur;
     document.getElementById('missionsFaitDate').value = Utils.todayISO();
     const now = new Date();
     const hh = String(now.getHours()).padStart(2, '0');
     const mm = String(now.getMinutes()).padStart(2, '0');
-    document.getElementById('missionsFaitHeure').value = `${hh}:${mm}`;
+    document.getElementById('missionsFaitHeureDebut').value = i.heurePrevue || (hh + ':' + mm);
+    document.getElementById('missionsFaitHeureFin').value = '';
+    document.getElementById('missionsFaitHeure').value = hh + ':' + mm;
+    const donChk = document.getElementById('missionsFaitDonCheck');
+    if (donChk) { donChk.checked = false; }
+    const donMnt = document.getElementById('missionsFaitDonMontant');
+    if (donMnt) { donMnt.value = ''; donMnt.style.display = 'none'; }
     document.getElementById('missionsFaitNote').value = '';
+    const selVeh = document.getElementById('missionsFaitVehicule');
+    if (selVeh && typeof Storage !== 'undefined' && Storage.getAdherents) {
+      const params = Storage.getParametres ? Storage.getParametres() : {};
+      const defId = String(params.vehiculeDefautId || '');
+      const benevoles = Storage.getAdherents().filter(a => a.type === 'B\u00e9n\u00e9vole' || (a.type === 'Adh\u00e9rent b\u00e9n\u00e9ficiaire' && a.aussiBenevole === true));
+      const liste = benevoles.slice().sort((a, b) => {
+        const na = ((a.nom || '') + ' ' + (a.prenom || '')).toLowerCase();
+        const nb = ((b.nom || '') + ' ' + (b.prenom || '')).toLowerCase();
+        return na.localeCompare(nb);
+      });
+      selVeh.innerHTML = '<option value="">-- Aucun --</option>' + liste.map(a => {
+        const nom = ((a.prenom || '') + ' ' + (a.nom || '')).trim();
+        const isSel = String(a.id) === defId ? ' selected' : '';
+        return '<option value="' + Utils.escapeHtml(String(a.id)) + '"' + isSel + '>' + Utils.escapeHtml(nom) + '</option>';
+      }).join('');
+    }
     document.getElementById('missionsFaitModal').classList.add('active');
   },
 
