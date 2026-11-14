@@ -657,9 +657,22 @@ const Missions = {
                 <div style="font-size:.75rem;color:#166534;text-transform:uppercase;font-weight:700;">Intervention</div>
                 <div style="font-size:1.05rem;font-weight:800;margin-top:4px;" id="missionsFaitTitre">—</div>
               </div>
+              <div class="form-group"><label>Date *</label><input type="date" id="missionsFaitDate" required></div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                <div class="form-group"><label>Date *</label><input type="date" id="missionsFaitDate" required></div>
-                <div class="form-group"><label>Heure</label><input type="time" id="missionsFaitHeure"></div>
+                <div class="form-group"><label>Heure de d\u00e9but *</label><input type="time" id="missionsFaitHeureDebut" required></div>
+                <div class="form-group"><label>Heure de fin *</label><input type="time" id="missionsFaitHeureFin" required></div>
+              </div>
+              <input type="time" id="missionsFaitHeure" style="display:none;">
+              <div class="form-group">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                  <input type="checkbox" id="missionsFaitDonCheck" onchange="document.getElementById('missionsFaitDonMontant').style.display = this.checked ? 'block' : 'none'" style="width:auto;">
+                  <span>Don re\u00e7u \u00e0 cette occasion</span>
+                </label>
+                <input type="number" step="0.01" min="0" id="missionsFaitDonMontant" placeholder="Montant en \u20ac" style="display:none;margin-top:8px;padding:9px;border:1px solid var(--border);border-radius:8px;font-size:.88rem;width:100%;">
+              </div>
+              <div class="form-group">
+                <label>V\u00e9hicule utilis\u00e9 (\u00e0 rembourser)</label>
+                <select id="missionsFaitVehicule" style="padding:9px;border:1px solid var(--border);border-radius:8px;font-size:.88rem;width:100%;"></select>
               </div>
               <div class="form-group"><label>Note</label><textarea id="missionsFaitNote" rows="3"></textarea></div>
               <div style="display:flex;gap:10px;">
