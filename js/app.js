@@ -86,9 +86,10 @@ const BricoBol = {
     };
 
     if (typeof SupaClient !== 'undefined') {
-      SupaClient.init().then(async () => {
-        await Storage.chargerToutDepuisSupabase();
+      SupaClient.init().then(() => {
+        Storage._chargerDepuisLocal();
         demarrer();
+        Storage.chargerToutDepuisSupabase().catch(e => console.warn('Sync arriere-plan :', e));
       });
     } else {
       demarrer();

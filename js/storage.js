@@ -193,6 +193,11 @@ const Storage = {
     this._sauverCacheLocal();
     console.log('✅ Chargé : ' + tables.map(t => t + '=' + (this.cache[t]||[]).length).join(', '));
     this._majBandeau();
+    const _saisieEnCours = (typeof document !== 'undefined') && (document.querySelector('.modal.active') || (document.activeElement && ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)));
+    if (!_saisieEnCours && typeof Router !== 'undefined' && Router.currentView) {
+      const _mod = Router.registry[Router.currentView];
+      if (_mod && _mod.onShow) _mod.onShow();
+    }
   },
 
   _chargerDepuisLocal() {
@@ -513,7 +518,7 @@ window.addEventListener('focus', async () => {
   if (!Storage._charge) return;
   if (typeof SupaClient === 'undefined' || !SupaClient.client) return;
   if (!SupaClient.enLigne) return;
-  if (Date.now() - _dernierFocusRechargement < 30000) return;
+  if (Date.now() - _dernierFocusRechargement < 90000) return;
   if (Storage._derniereEcriture && (Date.now() - Storage._derniereEcriture) < 8000) {
     console.log('⏭️ Focus ignoré (écriture récente)');
     return;

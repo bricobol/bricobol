@@ -214,3 +214,17 @@ Plan en 8 etapes :
 
 Emplacement du rappel : Dashboard (bandeau) + Module Frais (carte stats) + fiche entree comptable (bouton rembourse).
 
+## Demarrage eclair - FAIT (14/11/2026)
+
+Stale-while-revalidate applique. Console type :
+1. 📦 Charge depuis localStorage (instantane)
+2. 🧰 Gestion BricoBol v0.5 (app visible)
+3. ⏳ Chargement depuis Supabase (arriere-plan)
+4. ✅ Charge : adherents=34, ... (sync terminee)
+
+Modifs :
+- app.js init : Storage._chargerDepuisLocal() puis demarrer(), puis chargerToutDepuisSupabase().catch() en arriere-plan
+- storage.js : apres la sync, refresh UNIQUEMENT si pas de saisie (modale active ou input/textarea/select focus)
+- storage.js focus : 30s -> 90s
+
+Gain : app visible en moins de 100ms au lieu de 500ms-2s.
