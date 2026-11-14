@@ -144,6 +144,10 @@ const Frais = {
     this.repartitionTemp = [];
     this.refreshBenevolesFraisList();
     this.refreshInterventionsList();
+
+    const _pVeh = (typeof Storage !== 'undefined' && Storage.getParametres) ? Storage.getParametres() : {};
+    const _champVehInit = document.getElementById('fraisVehiculeProprietaire');
+    if (_champVehInit && !_champVehInit.value && _pVeh.vehiculeDefautNom) { _champVehInit.value = _pVeh.vehiculeDefautNom; }
     const baremeEl = document.getElementById('fraisBaremeAffiche');
     if (baremeEl) baremeEl.textContent = this.getBareme().toFixed(2);
     const statut = document.getElementById('fraisCalcStatut');
@@ -743,7 +747,7 @@ const Frais = {
             <strong style="color:#1e40af;">${(f.montant || 0).toFixed(2)} €</strong>
           </div>
           <div style="display:flex;justify-content:space-between;padding:10px 0 0;border-top:2px solid #1e40af;margin-top:6px;">
-            <span style="color:#166534;font-weight:800;">💵 À REMBOURSER AU BÉNÉVOLE</span>
+            <span style="color:#166534;font-weight:800;">💵 À REMBOURSER AU PROPRI\u00c9TAIRE DU V\u00c9HICULE</span>
             <strong style="color:#166534;font-size:1.15rem;">${(f.montant || 0).toFixed(2)} €</strong>
           </div>
         </div>`;
@@ -791,7 +795,7 @@ const Frais = {
             💰 Économie réalisée = <strong style="color:var(--success);">${economie.toFixed(2)} €</strong>
           </div>
           <div style="display:flex;justify-content:space-between;padding:10px 0 0;border-top:2px solid var(--success);margin-top:8px;">
-            <span style="color:#166534;font-weight:800;">💵 À REMBOURSER AU BÉNÉVOLE</span>
+            <span style="color:#166534;font-weight:800;">💵 À REMBOURSER AU PROPRI\u00c9TAIRE DU V\u00c9HICULE</span>
             <strong style="color:#166534;font-size:1.15rem;">${(f.montant || 0).toFixed(2)} €</strong>
           </div>
         </div>`;
@@ -828,6 +832,10 @@ const Frais = {
       <div class="adh-detail-section">
         <h4>Bénévole</h4>
         <p>👤 ${Utils.escapeHtml(f.benevole)}</p>
+      </div>
+      <div class="adh-detail-section">
+        <h4>Propri\u00e9taire du v\u00e9hicule (\u00e0 rembourser)</h4>
+        <p>\uD83D\uDE97 ${f.vehiculeProprietaireNom && f.vehiculeProprietaireNom !== f.benevole ? Utils.escapeHtml(f.vehiculeProprietaireNom) : Utils.escapeHtml(f.benevole) + ' <em style="color:var(--text-light);font-size:.8rem;">(m\u00eame que le b\u00e9n\u00e9vole)</em>'}</p>
       </div>
       <div class="adh-detail-section">
         <h4>Trajet global</h4>
