@@ -119,7 +119,7 @@ const Frais = {
         <div class="adh-card-info">
           <div class="adh-card-name">
             <span class="adh-card-numero">${Utils.escapeHtml(f.numero)}</span>
-            ${f.vehiculeProprietaireNom && f.vehiculeProprietaireNom !== f.benevole ? Utils.escapeHtml(f.benevole || '\u2014') + ' \u2192 \uD83D\uDE97 ' + Utils.escapeHtml(f.vehiculeProprietaireNom) : '\uD83D\uDE97 ' + Utils.escapeHtml(f.vehiculeProprietaireNom || f.benevole || '\u2014')} \u00b7 ${f.km} km
+            ${f.vehiculeProprietaireNom && f.vehiculeProprietaireNom !== f.benevole ? '\uD83D\uDE97 <strong>' + Utils.escapeHtml(f.vehiculeProprietaireNom) + '</strong> <small style="color:var(--text-light);font-weight:400;">\u2190 ' + Utils.escapeHtml(f.benevole || '\u2014') + '</small>' : '\uD83D\uDE97 <strong>' + Utils.escapeHtml(f.vehiculeProprietaireNom || f.benevole || '\u2014') + '</strong>'} \u00b7 ${f.km} km
           </div>
           <div class="adh-card-details">
             📅 ${Utils.formatDate(f.date)} · 🚗 ${trajetAffiche}<br>
