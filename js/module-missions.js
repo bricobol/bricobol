@@ -291,6 +291,20 @@ const Missions = {
     document.getElementById('missionsFaitModal').classList.add('active');
   },
 
+  _peuplerVehicules(selId, i) {
+    const sel = document.getElementById(selId);
+    if (!sel || typeof Storage === 'undefined' || !Storage.getAdherents) return;
+    const params = Storage.getParametres ? Storage.getParametres() : {};
+    const defId = String((i && i.vehiculeProprietaireId) || params.vehiculeDefautId || '');
+    const benevoles = Storage.getAdherents().filter(a => a.type === 'B\u00e9n\u00e9vole' || (a.type === 'Adh\u00e9rent b\u00e9n\u00e9ficiaire' && a.aussiBenevole === true));
+    const liste = benevoles.slice().sort((a, b) => ((a.nom || '') + ' ' + (a.prenom || '')).toLowerCase().localeCompare(((b.nom || '') + ' ' + (b.prenom || '')).toLowerCase()));
+    sel.innerHTML = '<option value="">-- Aucun --</option>' + liste.map(a => {
+      const nom = ((a.prenom || '') + ' ' + (a.nom || '')).trim();
+      const isSel = String(a.id) === defId ? ' selected' : '';
+      return '<option value="' + Utils.escapeHtml(String(a.id)) + '"' + isSel + '>' + Utils.escapeHtml(nom) + '</option>';
+    }).join('');
+  },
+
   closeFaitModal() { document.getElementById('missionsFaitModal').classList.remove('active'); },
 
   confirmerFait(event) {
@@ -415,6 +429,8 @@ const Missions = {
     document.getElementById('missionsValiderKmAuto').value = '—';
     document.getElementById('missionsValiderEcart').innerHTML = '';
     document.getElementById('missionsValiderRadioDeclare').disabled = (i.kmDeclares === null || i.kmDeclares === undefined);
+    const _lblDecl = document.getElementById('missionsValiderRadioDeclare').closest('label');
+    if (_lblDecl) _lblDecl.style.display = (i.kmDeclares === null || i.kmDeclares === undefined) ? 'none' : 'flex';
     document.getElementById('missionsValiderRadioDeclare').checked = false;
     document.getElementById('missionsValiderRadioAuto').checked = true;
     document.getElementById('missionsValiderRadioManuel').checked = false;
@@ -422,6 +438,14 @@ const Missions = {
     document.getElementById('missionsValiderKmManuel').disabled = true;
     document.getElementById('missionsValiderMontant').textContent = '0,00 €';
     document.getElementById('missionsValiderCalcStatut').innerHTML = '<div style="text-align:center;color:#2563eb;font-size:.82rem;padding:6px;">⏳ Calcul du trajet en cours…</div>';
+
+    document.getElementById('missionsValiderHeureDebut').value = i.heurePrevue || '';
+    document.getElementById('missionsValiderHeureFin').value = '';
+    const _donChkV = document.getElementById('missionsValiderDonCheck');
+    if (_donChkV) _donChkV.checked = false;
+    const _donMntV = document.getElementById('missionsValiderDonMontant');
+    if (_donMntV) { _donMntV.value = ''; _donMntV.style.display = 'none'; }
+    this._peuplerVehicules('missionsValiderVehicule', i);
 
     document.getElementById('missionsValiderModal').classList.add('active');
 
@@ -563,6 +587,21 @@ const Missions = {
 
     if (kmChoisi < 0 || isNaN(kmChoisi)) { alert('Km invalide.'); return; }
 
+    const heureDebutV = document.getElementById('missionsValiderHeureDebut').value;
+    const heureFinV = document.getElementById('missionsValiderHeureFin').value;
+    const _enMinV = (h) => { const p = String(h || '').split(':'); return p.length === 2 ? parseInt(p[0], 10) * 60 + parseInt(p[1], 10) : null; };
+    const minDebutV = _enMinV(heureDebutV);
+    const minFinV = _enMinV(heureFinV);
+    if (minDebutV !== null && minFinV !== null && minFinV <= minDebutV) {
+      alert('L\u2019heure de fin doit \u00EAtre apr\u00E8s l\u2019heure de d\u00E9but.');
+      return;
+    }
+    const donChkV = document.getElementById('missionsValiderDonCheck');
+    const donCocheV = !!(donChkV && donChkV.checked);
+    const selVehV = document.getElementById('missionsValiderVehicule');
+    const vehIdV = selVehV ? selVehV.value : '';
+    const vehNomV = (selVehV && vehIdV && selVehV.selectedIndex >= 0) ? selVehV.options[selVehV.selectedIndex].text : '';
+
     const list = this.getAll();
     const idx = list.findIndex(x => x.id === id);
     if (idx === -1) return;
@@ -571,6 +610,14 @@ const Missions = {
     list[idx].valideeLe = new Date().toISOString();
     list[idx].kmValides = kmChoisi;
     if (!list[idx].dateRealisee) list[idx].dateRealisee = Utils.todayISO();
+    if (heureDebutV && !list[idx].heureRealisee) list[idx].heureRealisee = heureDebutV;
+    if (minDebutV !== null && minFinV !== null) {
+      const heuresV = Math.round(((minFinV - minDebutV) / 60) * 100) / 100;
+      const nomsV = Storage.getBenevoles(list[idx]);
+      list[idx].heuresBenevoles = (nomsV.length > 0 ? nomsV : ['']).map(nom => ({ nom: nom, debut: heureDebutV, fin: heureFinV, heures: heuresV }));
+    }
+    list[idx].vehiculeProprietaireId = vehIdV || '';
+    list[idx].vehiculeProprietaireNom = vehNomV || '';
 
     Interventions.saveAll(list);
 
@@ -592,6 +639,10 @@ const Missions = {
       msg += '\n\n💡 Pensez à créer les frais avec le bouton 🚗.';
     }
     alert(msg);
+    if (donCocheV) {
+      if (typeof BricoBol !== 'undefined' && BricoBol.ensureModuleMounted) BricoBol.ensureModuleMounted('interventions');
+      setTimeout(() => { Interventions.saisirDon(id); }, 300);
+    }
   },
 
   // ---------- Modale ASSIGNER ----------
@@ -823,6 +874,25 @@ const Missions = {
                 <div style="margin-top:12px;padding-top:12px;border-top:1px dashed #bfdbfe;font-size:1.05rem;display:flex;justify-content:space-between;align-items:center;">
                   <span style="font-weight:700;color:#1e40af;">💰 Montant</span>
                   <strong id="missionsValiderMontant" style="color:#16a34a;font-size:1.3rem;">0,00 €</strong>
+                </div>
+              </div>
+
+              <div style="background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px;">
+                <div style="font-weight:800;margin-bottom:10px;">Heures, v\u00e9hicule et don</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                  <div class="form-group"><label>Heure de d\u00e9but</label><input type="time" id="missionsValiderHeureDebut"></div>
+                  <div class="form-group"><label>Heure de fin</label><input type="time" id="missionsValiderHeureFin"></div>
+                </div>
+                <div class="form-group">
+                  <label>V\u00e9hicule utilis\u00e9 (\u00e0 rembourser)</label>
+                  <select id="missionsValiderVehicule" style="padding:9px;border:1px solid var(--border);border-radius:8px;font-size:.88rem;width:100%;"></select>
+                </div>
+                <div class="form-group">
+                  <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                    <input type="checkbox" id="missionsValiderDonCheck" onchange="document.getElementById('missionsValiderDonMontant').style.display = this.checked ? 'block' : 'none'" style="width:auto;">
+                    <span>Don re\u00e7u \u00e0 cette occasion</span>
+                  </label>
+                  <input type="number" step="0.01" min="0" id="missionsValiderDonMontant" placeholder="Montant en \u20ac" style="display:none;margin-top:8px;padding:9px;border:1px solid var(--border);border-radius:8px;font-size:.88rem;width:100%;">
                 </div>
               </div>
 
