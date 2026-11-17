@@ -72,6 +72,35 @@ const Utils = {
     return Number(n).toFixed(1).replace('.', ',') + ' km';
   },
 
+  // --- Tri commun : preference memorisee par liste (localStorage) ---
+  // vue = identifiant de la liste, ex: 'interventions' ; valeurs : 'recent' ou 'ancien'
+  getTri(vue, defaut) {
+    try {
+      const v = localStorage.getItem('bricobol_tri_' + vue);
+      if (v === 'recent' || v === 'ancien') return v;
+    } catch (e) { /* stockage indisponible */ }
+    return defaut === 'ancien' ? 'ancien' : 'recent';
+  },
+
+  setTri(vue, valeur) {
+    try { localStorage.setItem('bricobol_tri_' + vue, valeur); } catch (e) { /* ignore */ }
+  },
+
+  // Renvoie une COPIE triee. getKey(item) = chaine triable (ex: date ISO + heure).
+  trierListe(list, vue, getKey, defaut) {
+    const sens = this.getTri(vue, defaut) === 'ancien' ? 1 : -1;
+    return list.slice().sort((a, b) => sens * String(getKey(a) || '').localeCompare(String(getKey(b) || '')));
+  },
+
+  // Liste deroulante de tri. onchange = code JS lance apres le choix (sans guillemets doubles).
+  triSelectHTML(vue, onchange, defaut) {
+    const cur = this.getTri(vue, defaut);
+    return '<select onchange="Utils.setTri(\'' + vue + '\', this.value);' + (onchange || '') + '" style="padding:8px;border:1px solid var(--border);border-radius:8px;font-size:.85rem;">'
+      + '<option value="recent"' + (cur === 'recent' ? ' selected' : '') + '>\u2193 Plus r\u00E9cents en haut</option>'
+      + '<option value="ancien"' + (cur === 'ancien' ? ' selected' : '') + '>\u2191 Plus anciens en haut</option>'
+      + '</select>';
+  },
+
   // --- ID unique simple ---
   uid() {
     return Date.now() + Math.random();

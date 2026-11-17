@@ -110,12 +110,8 @@ const Interventions = {
       return;
     }
 
-    list.sort((a, b) => {
-      const da = (a.datePrevue || '9999-12-31') + ' ' + (a.heurePrevue || '99:99');
-      const db = (b.datePrevue || '9999-12-31') + ' ' + (b.heurePrevue || '99:99');
-      return db.localeCompare(da);
-    });
-    container.innerHTML = list.map(i => this.renderCard(i)).join('');
+    const triee = Utils.trierListe(list, 'interventions', i => (i.datePrevue || '9999-12-31') + ' ' + (i.heurePrevue || '99:99'), 'recent');
+    container.innerHTML = triee.map(i => this.renderCard(i)).join('');
   },
 
   renderCard(i) {
@@ -658,7 +654,7 @@ const Interventions = {
               <option value="sans_frais">🚗 Frais à créer</option>
             </select>
           </div>
-          <div style="margin-top:10px;font-size:.82rem;color:var(--text-light);" id="intCount">0 intervention</div>
+          <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;"><span style="font-size:.82rem;color:var(--text-light);" id="intCount">0 intervention</span>${Utils.triSelectHTML('interventions', 'Interventions.render()', 'recent')}</div>
         </div>
         <div id="interventionsListContainer"></div>
       </section>`;

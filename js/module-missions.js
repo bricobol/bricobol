@@ -127,6 +127,11 @@ const Missions = {
     else if (this.currentTab === 'a_valider') list = this.getAValider();
     else if (this.currentTab === 'historique') list = this.getHistorique();
 
+    const defautTri = (this.currentTab === 'historique') ? 'recent' : 'ancien';
+    list = Utils.trierListe(list, 'missions_' + this.currentTab, i => (i.datePrevue || '') + ' ' + (i.heurePrevue || '00:00'), defautTri);
+    if (list.length > 1) {
+      html += '<div style="display:flex;justify-content:flex-end;margin-bottom:10px;">' + Utils.triSelectHTML('missions_' + this.currentTab, 'Missions.render()', defautTri) + '</div>';
+    }
     if (list.length === 0) {
       html += `
         <div class="card" style="text-align:center;padding:60px 24px;">
