@@ -297,7 +297,21 @@ const Missions = {
     event.preventDefault();
     const id = Number(document.getElementById('missionsFaitId').value);
     const dateRealisee = document.getElementById('missionsFaitDate').value;
-    const heureRealisee = document.getElementById('missionsFaitHeure').value;
+    const heureDebut = document.getElementById('missionsFaitHeureDebut').value;
+    const heureFin = document.getElementById('missionsFaitHeureFin').value;
+    const heureRealisee = heureDebut || document.getElementById('missionsFaitHeure').value;
+    const _enMin = (h) => { const p = String(h || '').split(':'); return p.length === 2 ? parseInt(p[0], 10) * 60 + parseInt(p[1], 10) : null; };
+    const minutesDebut = _enMin(heureDebut);
+    const minutesFin = _enMin(heureFin);
+    if (minutesDebut !== null && minutesFin !== null && minutesFin <= minutesDebut) {
+      alert('L\u2019heure de fin doit \u00EAtre apr\u00E8s l\u2019heure de d\u00E9but.');
+      return;
+    }
+    const donChk = document.getElementById('missionsFaitDonCheck');
+    const donCoche = !!(donChk && donChk.checked);
+    const selVeh = document.getElementById('missionsFaitVehicule');
+    const vehId = selVeh ? selVeh.value : '';
+    const vehNom = (selVeh && vehId && selVeh.selectedIndex >= 0) ? selVeh.options[selVeh.selectedIndex].text : '';
     const note = document.getElementById('missionsFaitNote').value.trim();
 
     const list = this.getAll();
@@ -307,12 +321,23 @@ const Missions = {
     list[idx].statut = 'terminee';
     list[idx].dateRealisee = dateRealisee;
     if (heureRealisee) list[idx].heureRealisee = heureRealisee;
+    if (minutesDebut !== null && minutesFin !== null) {
+      const heures = Math.round(((minutesFin - minutesDebut) / 60) * 100) / 100;
+      const noms = Storage.getBenevoles(list[idx]);
+      list[idx].heuresBenevoles = (noms.length > 0 ? noms : ['']).map(nom => ({ nom: nom, debut: heureDebut, fin: heureFin, heures: heures }));
+    }
+    list[idx].vehiculeProprietaireId = vehId || '';
+    list[idx].vehiculeProprietaireNom = vehNom || '';
     if (note) {
       list[idx].notes = (list[idx].notes || '') ? list[idx].notes + '\n' + note : note;
     }
 
     Interventions.saveAll(list);
     this.closeFaitModal();
+    if (donCoche) {
+      if (typeof BricoBol !== 'undefined' && BricoBol.ensureModuleMounted) BricoBol.ensureModuleMounted('interventions');
+      setTimeout(() => { Interventions.saisirDon(id); }, 300);
+    }
     this.render();
     if (typeof Agenda !== 'undefined' && Agenda.render) Agenda.render();
     if (typeof Dashboard !== 'undefined' && Dashboard.render) Dashboard.render();

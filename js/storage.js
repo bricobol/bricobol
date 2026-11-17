@@ -59,6 +59,8 @@ const Storage = {
       deplacement_id: 'deplacementId',
       sans_frais: "sansFrais",
       heures_benevoles: 'heuresBenevoles',
+      vehicule_proprietaire_id: 'vehiculeProprietaireId',
+      vehicule_proprietaire_nom: 'vehiculeProprietaireNom',
       updated_at: 'updatedAt'
     },
     deplacements: {
